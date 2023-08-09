@@ -20,7 +20,7 @@ void DrawRectangle(int _x, int _y, int width, int height, uint32_t color)
     {
         for (int x = _x; x < realWidth; ++x)
         {
-            g_ColorBuffer[(y * g_WindowWidth) + x] = color;
+            DrawPixel(x, y, color);
         }
     }
 }
@@ -43,6 +43,14 @@ void DrawGrid(uint32_t color, int strideX, int strideY)
         {
             g_ColorBuffer[(g_WindowWidth * y) + x] = color;
         }
+    }
+}
+
+void DrawPixel(int x, int y, uint32_t color)
+{
+    if (x >= 0 && x < g_WindowWidth && y >= 0 && y < g_WindowHeight)
+    {
+        g_ColorBuffer[(g_WindowWidth * y) + x] = color;
     }
 }
 

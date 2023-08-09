@@ -3,8 +3,20 @@
 #include <stdint.h>
 #include "SDL.h"
 #include "display.h"
+#include "vector.h"
+
+
+#define N_POINTS (9 * 9 * 9)
+
 
 bool g_bGameRunning = true;
+
+vec3 g_CubePoints[N_POINTS];
+vec2 g_ProjectedPoints[N_POINTS];
+
+vec3 g_CameraPosition = { .x = 0.0f, .y = 0.0f, .z = -5.0f };
+
+float g_FOV_factor = 640;
 
 
 void Setup(void)
@@ -19,6 +31,19 @@ void Setup(void)
     if (g_ColorBufferTexture == NULL)
     {
         SDL_Log("Error SDL_CreateTexture() failed");
+    }
+
+    int pointCount = 0;
+    for (float x = -1; x <= 1; x += 0.25)
+    {
+        for (float y = -1; y <= 1; y += 0.25)
+        {
+            for (float z = -1; z <= 1; z += 0.25)
+            {
+                vec3 newPoint = { x, y, z };
+                g_CubePoints[pointCount++] = newPoint;
+            }
+        }
     }
 }
 
@@ -49,14 +74,48 @@ void Render(void)
     SDL_RenderCopy(g_Renderer, g_ColorBufferTexture, NULL, NULL);
 
     ClearColorBuffer(0xFF000000);
-    DrawGrid(0xFF00FF00, 10, 10);
-    DrawRectangle(600, 800, 1200, 200, 0xFFFFC0CB);
+
+    for (int i = 0; i < N_POINTS; ++i)
+    {
+        vec2 projectedPoint = g_ProjectedPoints[i];
+        DrawRectangle(projectedPoint.x + g_WindowWidth / 2, projectedPoint.y + g_WindowHeight / 2, 4, 4, 0xFFFFFF00);
+    }
+
+
+    //vec2 projectedPoint = g_ProjectedPoints[0];
+    //DrawRectangle(projectedPoint.x, projectedPoint.y, 4, 4, 0xFFFFFF00);
+
     SDL_RenderPresent(g_Renderer);
+}
+
+vec2 ProjectOrthographic(vec3 point)
+{
+    vec2 projectedPoint = { .x = point.x * g_FOV_factor, .y = point.y * g_FOV_factor};
+    return projectedPoint;
+}
+
+vec2 ProjectPerspective(vec3 point)
+{
+    vec2 projectedPoint = 
+    { 
+        .x = (point.x * g_FOV_factor) / point.z, 
+        .y = (point.y * g_FOV_factor) / point.z 
+    };
+    return projectedPoint;
 }
 
 void Update(void)
 {
+    for (int i = 0; i < N_POINTS; ++i)
+    {
+        vec3 point = g_CubePoints[i];
+        point.z -= g_CameraPosition.z;
 
+        vec2 projectedPoint = ProjectPerspective(point);
+        //vec2 projectedPoint = ProjectOrthographic(point);
+
+        g_ProjectedPoints[i] = projectedPoint;
+    }
 }
 
 #undef main
@@ -77,6 +136,7 @@ int main(int argc, char* args[])
     //SDL_SetWindowFullscreen(g_Window, SDL_WINDOW_FULLSCREEN);
 
     Setup();
+
 
     while (g_bGameRunning)
     {

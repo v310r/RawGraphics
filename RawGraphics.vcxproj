@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="src\display.c" />
     <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\vector.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="vendor\SDL\VisualC\SDL\SDL.vcxproj">
@@ -29,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\display.h" />
+    <ClInclude Include="src\vector.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

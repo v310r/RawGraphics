@@ -17,6 +17,8 @@ void DrawRectangle(int _x, int _y, int width, int height, uint32_t color);
 
 void DrawGrid(uint32_t color, int strideX, int strideY);
 
+void DrawPixel(int x, int y, uint32_t color);
+
 void ClearColorBuffer(uint32_t color);
 
 int InitGraphics(void);
