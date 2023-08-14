@@ -11,20 +11,6 @@ SDL_Renderer* g_Renderer = NULL;
 uint32_t* g_ColorBuffer = NULL;
 SDL_Texture* g_ColorBufferTexture = NULL;
 
-
-void DrawRectangle(int _x, int _y, int width, int height, uint32_t color)
-{
-    const int realWidth = width + _x;
-    const int realHeight = height + _y;
-    for (int y = _y; y < realHeight; ++y)
-    {
-        for (int x = _x; x < realWidth; ++x)
-        {
-            DrawPixel(x, y, color);
-        }
-    }
-}
-
 void DrawGrid(uint32_t color, int strideX, int strideY)
 {
     // vertical lines
@@ -43,6 +29,46 @@ void DrawGrid(uint32_t color, int strideX, int strideY)
         {
             g_ColorBuffer[(g_WindowWidth * y) + x] = color;
         }
+    }
+}
+
+void DrawRectangle(int _x, int _y, int width, int height, uint32_t color)
+{
+    const int realWidth = width + _x;
+    const int realHeight = height + _y;
+    for (int y = _y; y < realHeight; ++y)
+    {
+        for (int x = _x; x < realWidth; ++x)
+        {
+            DrawPixel(x, y, color);
+        }
+    }
+}
+
+void DrawTriangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color)
+{
+    DrawLine(x0, y0, x1, y1, color);
+    DrawLine(x1, y1, x2, y2, color);
+    DrawLine(x2, y2, x0, y0, color);
+}
+
+void DrawLine(int x0, int y0, int x1, int y1, uint32_t color)
+{
+    int deltaX = x1 - x0;
+    int deltaY = y1 - y0;
+
+    int longestSideLength = abs(deltaX) >= abs(deltaY) ? abs(deltaX) : abs(deltaY);
+
+    float incrementX = deltaX / (float)longestSideLength;
+    float incrementY = deltaY / (float)longestSideLength;
+
+    float currentX = x0;
+    float currentY = y0;
+    for (int i = 0; i <= longestSideLength; ++i)
+    {
+        DrawPixel(round(currentX), round(currentY), color);
+        currentX += incrementX;
+        currentY += incrementY;
     }
 }
 
@@ -66,7 +92,7 @@ void ClearColorBuffer(uint32_t color)
     }
 }
 
-int InitGraphics(void)
+int InitSDLGraphics(void)
 {
     SDL_DisplayMode displayMode;
     SDL_GetCurrentDisplayMode(0, &displayMode);
@@ -91,11 +117,8 @@ int InitGraphics(void)
     return 0;
 }
 
-void DestroyGraphics(void)
+void DestroySDLGraphics(void)
 {
-    free(g_ColorBuffer);
-
     SDL_DestroyRenderer(g_Renderer);
     SDL_DestroyWindow(g_Window);
-    SDL_Quit();
 }
