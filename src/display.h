@@ -6,6 +6,20 @@
 #define FPS 180.0f
 #define FRAME_TARGET_TIME (1000.0f / FPS)
 
+enum CullMethod
+{
+    CULL_NONE,
+    CULL_BACKFACE
+} g_CullMethod;
+
+enum RenderMethod
+{
+    RENDER_WIRE,
+    RENDER_WIRE_VERTEX,
+    RENDER_FILL_TRIANGLE,
+    RENDER_FILL_TRIANGLE_WIRE
+} g_RenderMethod;
+
 extern int g_WindowWidth;
 extern int g_WindowHeight;
 

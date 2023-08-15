@@ -20,8 +20,13 @@ triangle_t* g_TrianglesToRender = NULL;
 float g_FOV_factor = 640;
 
 
+
+
 void Setup(void)
 {
+    g_RenderMethod = RENDER_WIRE;
+    g_CullMethod = CULL_BACKFACE;
+
     g_ColorBuffer = (uint32_t*)malloc(sizeof(uint32_t) * g_WindowWidth * g_WindowHeight);
     if (g_ColorBuffer == NULL)
     {
@@ -34,8 +39,8 @@ void Setup(void)
         SDL_Log("Error SDL_CreateTexture() failed");
     }
 
-    //LoadCubeMeshData();
-    LoadOBJMeshData("assets/f22.obj");
+    LoadCubeMeshData();
+    //LoadOBJMeshData("assets/cube.obj");
 }
 
 void ProcessInput(void)
@@ -54,6 +59,36 @@ void ProcessInput(void)
                 g_bGameRunning = false;
             }
 
+            if (ev.key.keysym.sym == SDLK_1)
+            {
+                g_RenderMethod = RENDER_WIRE_VERTEX;
+            }
+
+            if (ev.key.keysym.sym == SDLK_2)
+            {
+                g_RenderMethod = RENDER_WIRE;
+            }
+
+            if (ev.key.keysym.sym == SDLK_3)
+            {
+                g_RenderMethod = RENDER_FILL_TRIANGLE;
+            }
+
+            if (ev.key.keysym.sym == SDLK_4)
+            {
+                g_RenderMethod = RENDER_FILL_TRIANGLE_WIRE;
+            }
+
+            if (ev.key.keysym.sym == SDLK_c)
+            {
+                g_CullMethod = CULL_BACKFACE;
+            }
+
+            if (ev.key.keysym.sym == SDLK_d)
+            {
+                g_CullMethod = CULL_NONE;
+            }
+
             break;
         }
     }
@@ -70,13 +105,32 @@ void Render(void)
     {
         triangle_t triangle = g_TrianglesToRender[i];
 
-        DrawRectangle(triangle.points[0].x, triangle.points[0].y, 6, 6, 0xFFFFFF00);
-        DrawRectangle(triangle.points[1].x, triangle.points[1].y, 6, 6, 0xFFFFFF00);
-        DrawRectangle(triangle.points[2].x, triangle.points[2].y, 6, 6, 0xFFFFFF00);
+        if (g_RenderMethod == RENDER_FILL_TRIANGLE || g_RenderMethod == RENDER_FILL_TRIANGLE_WIRE)
+        {
+            DrawFilledTriangle(
+                triangle.points[0].x, triangle.points[0].y,
+                triangle.points[1].x, triangle.points[1].y,
+                triangle.points[2].x, triangle.points[2].y,
+                triangle.color);
+        }
 
-        DrawTriangle(triangle.points[0].x, triangle.points[0].y, triangle.points[1].x, triangle.points[1].y, triangle.points[2].x, triangle.points[2].y,
-            0xFF00FF00);
+        if (g_RenderMethod == RENDER_WIRE || g_RenderMethod == RENDER_WIRE_VERTEX || g_RenderMethod == RENDER_FILL_TRIANGLE_WIRE)
+        {
+            DrawTriangle(
+                triangle.points[0].x, triangle.points[0].y,
+                triangle.points[1].x, triangle.points[1].y,
+                triangle.points[2].x, triangle.points[2].y,
+                0xFF0000FF);
+        }
+
+        if (g_RenderMethod == RENDER_WIRE_VERTEX)
+        {
+            DrawRectangle(triangle.points[0].x, triangle.points[0].y, 6, 6, 0xFFFF0000);
+            DrawRectangle(triangle.points[1].x, triangle.points[1].y, 6, 6, 0xFFFF0000);
+            DrawRectangle(triangle.points[2].x, triangle.points[2].y, 6, 6, 0xFFFF0000);
+        }
     }
+
 
     SDL_RenderPresent(g_Renderer);
 }
@@ -126,7 +180,6 @@ void Update(void)
         faceVertices[2] = g_Mesh.Vertices[meshFace.c - 1];
 
 
-        triangle_t projectedTriangle;
         vec3_t transformedVertices[3];
         // for each vertex in current face_t we will apply transformations
         for (int j = 0; j < 3; ++j)
@@ -142,38 +195,51 @@ void Update(void)
             transformedVertices[j] = transformedVertex;
         }
 
-        // backface culling check
-        vec3_t vectorA = transformedVertices[0];
-        vec3_t vectorB = transformedVertices[1];
-        vec3_t vectorC = transformedVertices[2];
-
-        vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
-        vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
-
-        vec3_t normal = vec3Normalize(vec3Cross(vectorAB, vectorAC)); 
-
-        vec3_t cameraRay = vec3Sub(g_CameraPosition, vectorA);
-
-        float dotNormalCamera = vec3Dot(cameraRay, normal);
-
-        if (dotNormalCamera < 0)
+        if (g_CullMethod == CULL_BACKFACE)
         {
-            // we will not render faces that we do not see
-            continue;
+            vec3_t vectorA = transformedVertices[0];
+            vec3_t vectorB = transformedVertices[1];
+            vec3_t vectorC = transformedVertices[2];
+
+            vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
+            vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
+
+            vec3_t normal = vec3Normalize(vec3Cross(vectorAB, vectorAC)); 
+
+            vec3_t cameraRay = vec3Sub(g_CameraPosition, vectorA);
+
+            float dotNormalCamera = vec3Dot(cameraRay, normal);
+
+            if (dotNormalCamera < 0)
+            {
+                // we will not render faces that we do not see
+                continue;
+            }
+
         }
 
+        vec2_t projectedPoints[3];
         for (int j = 0; j < 3; ++j)
         {
-            vec2_t projectedPoint = ProjectPerspective(transformedVertices[j]);
+            projectedPoints[j] = ProjectPerspective(transformedVertices[j]);
             //vec2_t projectedPoint = ProjectOrthographic(transformedVertex);
 
 
-            projectedPoint.x += (g_WindowWidth / 2.0f);
-            projectedPoint.y += (g_WindowHeight / 2.0f);
+            projectedPoints[j].x += (g_WindowWidth / 2.0f);
+            projectedPoints[j].y += (g_WindowHeight / 2.0f);
 
 
-            projectedTriangle.points[j] = projectedPoint;
         }
+            
+        triangle_t projectedTriangle =
+        {
+            .points =
+            {
+                projectedPoints[0], projectedPoints[1], projectedPoints[2]
+            },
+
+            .color = meshFace.color
+        };
 
         array_push(g_TrianglesToRender, projectedTriangle);
     }
