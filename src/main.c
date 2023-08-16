@@ -230,7 +230,11 @@ void Update(void)
 
 
         }
-            
+        
+        // Depth calculation
+
+        float averageDepth = (transformedVertices[0].z + transformedVertices[1].z + transformedVertices[2].z) / 3.0f;
+
         triangle_t projectedTriangle =
         {
             .points =
@@ -238,10 +242,26 @@ void Update(void)
                 projectedPoints[0], projectedPoints[1], projectedPoints[2]
             },
 
-            .color = meshFace.color
+            .color = meshFace.color,
+            .averageDepth = averageDepth
         };
 
         array_push(g_TrianglesToRender, projectedTriangle);
+    }
+
+    // sorting triangles by depth
+    uint32_t numOfTriangles = array_length(g_TrianglesToRender);
+    for (int i = 0; i < numOfTriangles; ++i)
+    {
+        for (int j = i + 1; j < numOfTriangles; ++j)
+        {
+            if (g_TrianglesToRender[i].averageDepth < g_TrianglesToRender[j].averageDepth)
+            {
+                triangle_t temp = g_TrianglesToRender[i];
+                g_TrianglesToRender[i] = g_TrianglesToRender[j];
+                g_TrianglesToRender[j] = temp;
+            }
+        }
     }
 }
 
