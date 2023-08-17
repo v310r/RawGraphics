@@ -7,7 +7,10 @@ mesh_t g_Mesh =
 {
     .Vertices = NULL,
     .Faces = NULL,
-    .Rotation = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
+
+    .Scale = {.x = 1.0f, .y = 1.0f, .z = 1.0f},
+    .Rotation = {.x = 0.0f, .y = 0.0f, .z = 0.0f},
+    .Translation = {.x = 0.0f, .y = 0.0f, .z = 0.0f},
 };
 
 vec3_t g_CubeVertices[NUM_CUBE_VERTICES] =

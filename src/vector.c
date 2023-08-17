@@ -132,3 +132,16 @@ vec3_t vec3RotateZ(vec3_t v, float angle)
 
     return rotatedVector;
 }
+
+vec4_t vec4From_vec3(vec3_t v)
+{
+    vec4_t result = { v.x, v.y, v.z, 1.0f };
+    return result;
+}
+
+vec3_t vec3From_vec4(vec4_t v)
+{
+    vec3_t result = { v.x, v.y, v.z };
+    return result;
+}
+

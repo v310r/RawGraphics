@@ -7,6 +7,7 @@
 #include "triangle.h"
 #include "mesh.h"
 #include "array.h"
+#include "matrix.h"
 
 
 bool g_bGameRunning = true;
@@ -169,6 +170,20 @@ void Update(void)
     g_Mesh.Rotation.y += 0.01f;
     g_Mesh.Rotation.z += 0.01f;
 
+    g_Mesh.Scale.x += 0.002;
+    //g_Mesh.Scale.y += 0.002;
+
+    g_Mesh.Translation.x += 0.02;
+    g_Mesh.Translation.z = 5.0f;
+
+
+    mat4_t scaleMatrix = mat4MakeScale(g_Mesh.Scale.x, g_Mesh.Scale.y, g_Mesh.Scale.z);
+    mat4_t translationMatrix = mat4MakeTranslation(g_Mesh.Translation.x, g_Mesh.Translation.y, g_Mesh.Translation.z);
+    mat4_t rotationMatrix_X = mat4MakeRotationX(g_Mesh.Rotation.x);
+    mat4_t rotationMatrix_Y = mat4MakeRotationY(g_Mesh.Rotation.y);
+    mat4_t rotationMatrix_Z = mat4MakeRotationZ(g_Mesh.Rotation.z);
+
+
     int numberOfFaces = array_length(g_Mesh.Faces);
     for (int i = 0; i < numberOfFaces; ++i)
     {
@@ -180,26 +195,34 @@ void Update(void)
         faceVertices[2] = g_Mesh.Vertices[meshFace.c - 1];
 
 
-        vec3_t transformedVertices[3];
+        vec4_t transformedVertices[3];
         // for each vertex in current face_t we will apply transformations
         for (int j = 0; j < 3; ++j)
         {
-            vec3_t transformedVertex = faceVertices[j];
+            vec4_t transformedVertex = vec4From_vec3(faceVertices[j]);
 
-            transformedVertex = vec3RotateX(transformedVertex, g_Mesh.Rotation.y);
-            transformedVertex = vec3RotateY(transformedVertex, g_Mesh.Rotation.y);
-            transformedVertex = vec3RotateZ(transformedVertex, g_Mesh.Rotation.y);
+            mat4_t worldMatrix = mat4Identity();
+            worldMatrix = mat4Mulmat4(scaleMatrix, worldMatrix);
+            worldMatrix = mat4Mulmat4(rotationMatrix_X, worldMatrix);
+            worldMatrix = mat4Mulmat4(rotationMatrix_Y, worldMatrix);
+            worldMatrix = mat4Mulmat4(rotationMatrix_Z, worldMatrix);
+            worldMatrix = mat4Mulmat4(translationMatrix, worldMatrix);
 
-            transformedVertex.z += 5;
+            transformedVertex = mat4Mulvec4(worldMatrix, transformedVertex);
+
+
+            //transformedVertex = vec3RotateX(transformedVertex, g_Mesh.Rotation.y);
+            //transformedVertex = vec3RotateY(transformedVertex, g_Mesh.Rotation.y);
+            //transformedVertex = vec3RotateZ(transformedVertex, g_Mesh.Rotation.y);
 
             transformedVertices[j] = transformedVertex;
         }
 
         if (g_CullMethod == CULL_BACKFACE)
         {
-            vec3_t vectorA = transformedVertices[0];
-            vec3_t vectorB = transformedVertices[1];
-            vec3_t vectorC = transformedVertices[2];
+            vec3_t vectorA = vec3From_vec4(transformedVertices[0]);
+            vec3_t vectorB = vec3From_vec4(transformedVertices[1]);
+            vec3_t vectorC = vec3From_vec4(transformedVertices[2]);
 
             vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
             vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
@@ -221,7 +244,7 @@ void Update(void)
         vec2_t projectedPoints[3];
         for (int j = 0; j < 3; ++j)
         {
-            projectedPoints[j] = ProjectPerspective(transformedVertices[j]);
+            projectedPoints[j] = ProjectPerspective(vec3From_vec4(transformedVertices[j]));
             //vec2_t projectedPoint = ProjectOrthographic(transformedVertex);
 
 
