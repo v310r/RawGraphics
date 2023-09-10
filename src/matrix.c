@@ -72,7 +72,7 @@ mat4_t mat4MakeRotationZ(float angle)
 {
     // | c  -s 0 0 |
     // | s  c  0 0 |
-    // | 0  0  0 0 |
+    // | 0  0  1 0 |
     // | 0  0  0 1 |
 
     float c = cos(angle);
@@ -124,4 +124,34 @@ mat4_t mat4Mulmat4(mat4_t a, mat4_t b)
     }
 
     return m;
+}
+
+mat4_t mat4MakePerspective(float fov, float aspect, float znear, float zfar)
+{
+    // |  (h/w)*1/tan(fov/2)              0              0                  0  |
+    // |                   0   1/tan(fov/2)              0                  0  |
+    // |                   0              0     zf/(zf-zn)   (-zf*zn)/(zf-zn)  |
+    // |                   0              0              1                  0  |
+
+    mat4_t m = { {{0.0f}} };
+    m.m[0][0] = aspect * (1 / tan(fov / 2));
+    m.m[1][1] = 1 / tan(fov / 2);
+    m.m[2][2] = zfar / (zfar - znear);
+    m.m[2][3] = (-zfar * znear) / (zfar - znear);
+    m.m[3][2] = 1.0f;
+
+    return m;
+}                          
+
+vec4_t mat4MulVec4PerspectiveProjection(mat4_t projectionMatrix, vec4_t v)
+{
+    vec4_t result = mat4Mulvec4(projectionMatrix, v);
+    if (result.w != 0.0f)
+    {
+        result.x /= result.w;
+        result.y /= result.w;
+        result.z /= result.w;
+    }
+
+    return result;
 }

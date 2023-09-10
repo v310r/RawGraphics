@@ -8,6 +8,8 @@
 #include "mesh.h"
 #include "array.h"
 #include "matrix.h"
+#include "light.h"
+#include "texture.h"
 
 
 bool g_bGameRunning = true;
@@ -18,14 +20,11 @@ vec3_t g_CameraPosition = { .x = 0.0f, .y = 0.0f, .z = 0.0f };
 
 triangle_t* g_TrianglesToRender = NULL;
 
-float g_FOV_factor = 640;
-
-
-
+mat4_t g_PerspectiveProjectionMatrix;
 
 void Setup(void)
 {
-    g_RenderMethod = RENDER_WIRE;
+    g_RenderMethod = RENDER_FILL_TRIANGLE;
     g_CullMethod = CULL_BACKFACE;
 
     g_ColorBuffer = (uint32_t*)malloc(sizeof(uint32_t) * g_WindowWidth * g_WindowHeight);
@@ -40,8 +39,18 @@ void Setup(void)
         SDL_Log("Error SDL_CreateTexture() failed");
     }
 
+    const float fov = M_PI / 3.0f; // 60 degrees = 60 * PI / 180
+    const float aspectRation = (float)g_WindowHeight / (float)g_WindowWidth;
+    const float znear = 0.1f;
+    const float zfar = 100.0f;
+    g_PerspectiveProjectionMatrix = mat4MakePerspective(fov, aspectRation, znear, zfar);
+
+    g_MeshTexture = (uint32_t*)g_REDBRICK_TEXTURE;
+    g_TextureWidth = 64;
+    g_TextureHeight = 64;
+
     LoadCubeMeshData();
-    //LoadOBJMeshData("assets/cube.obj");
+    //LoadOBJMeshData("assets/f22.obj");
 }
 
 void ProcessInput(void)
@@ -80,6 +89,16 @@ void ProcessInput(void)
                 g_RenderMethod = RENDER_FILL_TRIANGLE_WIRE;
             }
 
+            if (ev.key.keysym.sym == SDLK_5)
+            {
+                g_RenderMethod = RENDER_TEXTURED;
+            }
+
+            if (ev.key.keysym.sym == SDLK_6)
+            {
+                g_RenderMethod = RENDER_TEXTURED_WIRE;
+            }
+
             if (ev.key.keysym.sym == SDLK_c)
             {
                 g_CullMethod = CULL_BACKFACE;
@@ -100,7 +119,7 @@ void Render(void)
     SDL_UpdateTexture(g_ColorBufferTexture, NULL, g_ColorBuffer, (int)(sizeof(uint32_t) * g_WindowWidth));
     SDL_RenderCopy(g_Renderer, g_ColorBufferTexture, NULL, NULL);
 
-    ClearColorBuffer(0xFF000000);
+    ClearColorBuffer(0xFF808080);
 
     for (int i = 0; i < array_length(g_TrianglesToRender); ++i)
     {
@@ -109,13 +128,22 @@ void Render(void)
         if (g_RenderMethod == RENDER_FILL_TRIANGLE || g_RenderMethod == RENDER_FILL_TRIANGLE_WIRE)
         {
             DrawFilledTriangle(
-                triangle.points[0].x, triangle.points[0].y,
-                triangle.points[1].x, triangle.points[1].y,
-                triangle.points[2].x, triangle.points[2].y,
+                triangle.points[0].x, triangle.points[0].y, // vertex A
+                triangle.points[1].x, triangle.points[1].y, // vertex B
+                triangle.points[2].x, triangle.points[2].y, // vertex C
                 triangle.color);
         }
 
-        if (g_RenderMethod == RENDER_WIRE || g_RenderMethod == RENDER_WIRE_VERTEX || g_RenderMethod == RENDER_FILL_TRIANGLE_WIRE)
+        if (g_RenderMethod == RENDER_TEXTURED || g_RenderMethod == RENDER_TEXTURED_WIRE)
+        {
+            DrawTexturedTriangle(
+                triangle.points[0].x, triangle.points[0].y, triangle.texcoords[0].u, triangle.texcoords[0].v,
+                triangle.points[1].x, triangle.points[1].y, triangle.texcoords[1].u, triangle.texcoords[1].v,
+                triangle.points[2].x, triangle.points[2].y, triangle.texcoords[2].u, triangle.texcoords[2].v,
+                g_MeshTexture);
+        }
+
+        if (g_RenderMethod == RENDER_WIRE || g_RenderMethod == RENDER_WIRE_VERTEX || g_RenderMethod == RENDER_FILL_TRIANGLE_WIRE || g_RenderMethod == RENDER_TEXTURED_WIRE)
         {
             DrawTriangle(
                 triangle.points[0].x, triangle.points[0].y,
@@ -138,12 +166,16 @@ void Render(void)
 
 vec2_t ProjectOrthographic(vec3_t point)
 {
+    // deprecated, but left as an example
+    static float g_FOV_factor = 640;
     vec2_t projectedPoint = { .x = point.x * g_FOV_factor, .y = point.y * g_FOV_factor};
     return projectedPoint;
 }
 
 vec2_t ProjectPerspective(vec3_t point)
 {
+    // deprecated, but left as an example
+    static float g_FOV_factor = 640;
     vec2_t projectedPoint = 
     { 
         .x = (point.x * g_FOV_factor) / point.z,  
@@ -166,16 +198,10 @@ void Update(void)
     array_free(g_TrianglesToRender);
     g_TrianglesToRender = NULL;
 
-    g_Mesh.Rotation.x += 0.01f;
     g_Mesh.Rotation.y += 0.01f;
-    g_Mesh.Rotation.z += 0.01f;
 
-    g_Mesh.Scale.x += 0.002;
-    //g_Mesh.Scale.y += 0.002;
-
-    g_Mesh.Translation.x += 0.02;
+    // temporary camera
     g_Mesh.Translation.z = 5.0f;
-
 
     mat4_t scaleMatrix = mat4MakeScale(g_Mesh.Scale.x, g_Mesh.Scale.y, g_Mesh.Scale.z);
     mat4_t translationMatrix = mat4MakeTranslation(g_Mesh.Translation.x, g_Mesh.Translation.y, g_Mesh.Translation.z);
@@ -218,36 +244,51 @@ void Update(void)
             transformedVertices[j] = transformedVertex;
         }
 
-        if (g_CullMethod == CULL_BACKFACE)
+        vec3_t vectorA = vec3From_vec4(transformedVertices[0]);
+        vec3_t vectorB = vec3From_vec4(transformedVertices[1]);
+        vec3_t vectorC = vec3From_vec4(transformedVertices[2]);
+
+        vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
+        vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
+
+        vec3_t normal = vec3Normalize(vec3Cross(vectorAB, vectorAC));
+
+        vec3_t cameraRay = vec3Sub(g_CameraPosition, vectorA);
+
+        float dotNormalCamera = vec3Dot(cameraRay, normal);
+
+        if (g_CullMethod == CULL_BACKFACE && dotNormalCamera < 0)
         {
-            vec3_t vectorA = vec3From_vec4(transformedVertices[0]);
-            vec3_t vectorB = vec3From_vec4(transformedVertices[1]);
-            vec3_t vectorC = vec3From_vec4(transformedVertices[2]);
-
-            vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
-            vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
-
-            vec3_t normal = vec3Normalize(vec3Cross(vectorAB, vectorAC)); 
-
-            vec3_t cameraRay = vec3Sub(g_CameraPosition, vectorA);
-
-            float dotNormalCamera = vec3Dot(cameraRay, normal);
-
-            if (dotNormalCamera < 0)
-            {
-                // we will not render faces that we do not see
-                continue;
-            }
-
+            // we will not render faces that we do not see
+            continue;
         }
 
-        vec2_t projectedPoints[3];
+        //light calculation
+        float dotNormalLight = vec3Dot(g_DirectionalLight.Direction, normal);
+        float intensityPercentage = (dotNormalLight * 0.5f) + 0.5;
+        meshFace.color = ApplyLightIntensity(meshFace.color, intensityPercentage);
+
+
+        // perspective projection application and perspective divide
+        vec4_t projectedPoints[3];
         for (int j = 0; j < 3; ++j)
         {
-            projectedPoints[j] = ProjectPerspective(vec3From_vec4(transformedVertices[j]));
+            projectedPoints[j] = mat4MulVec4PerspectiveProjection(g_PerspectiveProjectionMatrix, transformedVertices[j]);
             //vec2_t projectedPoint = ProjectOrthographic(transformedVertex);
 
 
+            //scale into the view
+            projectedPoints[j].x *= (g_WindowWidth / 2.0f);
+            projectedPoints[j].y *= (g_WindowHeight / 2.0f);
+
+            // Invert the x values to account for mirroring
+            projectedPoints[j].x = -projectedPoints[j].x;
+
+            // Invert the y values to account for flipped screen y coordinate
+            projectedPoints[j].y = -projectedPoints[j].y;
+
+
+            // translate projected points to the middle of the screen
             projectedPoints[j].x += (g_WindowWidth / 2.0f);
             projectedPoints[j].y += (g_WindowHeight / 2.0f);
 
@@ -263,6 +304,13 @@ void Update(void)
             .points =
             {
                 projectedPoints[0], projectedPoints[1], projectedPoints[2]
+            },
+
+            .texcoords =
+            {
+                {meshFace.a_uv.u, meshFace.a_uv.v},
+                {meshFace.b_uv.u, meshFace.b_uv.v},
+                {meshFace.c_uv.u, meshFace.c_uv.v},
             },
 
             .color = meshFace.color,
