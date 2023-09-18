@@ -28,6 +28,7 @@
     <ClCompile Include="src\swap.c" />
     <ClCompile Include="src\texture.c" />
     <ClCompile Include="src\triangle.c" />
+    <ClCompile Include="src\upng.c" />
     <ClCompile Include="src\vector.c" />
   </ItemGroup>
   <ItemGroup>
@@ -44,6 +45,7 @@
     <ClInclude Include="src\swap.h" />
     <ClInclude Include="src\texture.h" />
     <ClInclude Include="src\triangle.h" />
+    <ClInclude Include="src\upng.h" />
     <ClInclude Include="src\vector.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

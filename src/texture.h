@@ -2,6 +2,8 @@
 #define TEXTURE_H
 
 #include <stdint.h>
+#include "upng.h"
+
 
 typedef struct  
 {
@@ -15,5 +17,9 @@ extern int g_TextureHeight;
 extern const uint8_t g_REDBRICK_TEXTURE[];
 
 extern uint32_t* g_MeshTexture;
+
+extern upng_t* g_PNG_texture;
+
+void LoadPngTextureData(char* filename);
 
 #endif

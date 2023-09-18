@@ -10,6 +10,7 @@
 #include "matrix.h"
 #include "light.h"
 #include "texture.h"
+#include "upng.h"
 
 
 bool g_bGameRunning = true;
@@ -33,7 +34,7 @@ void Setup(void)
         SDL_Log("color buffer is NULL");
     }
 
-    g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_WindowWidth, g_WindowHeight);
+    g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, g_WindowWidth, g_WindowHeight);
     if (g_ColorBufferTexture == NULL)
     {
         SDL_Log("Error SDL_CreateTexture() failed");
@@ -45,12 +46,10 @@ void Setup(void)
     const float zfar = 100.0f;
     g_PerspectiveProjectionMatrix = mat4MakePerspective(fov, aspectRation, znear, zfar);
 
-    g_MeshTexture = (uint32_t*)g_REDBRICK_TEXTURE;
-    g_TextureWidth = 64;
-    g_TextureHeight = 64;
+    //LoadCubeMeshData();
+    LoadOBJMeshData("assets/f22.obj");
 
-    LoadCubeMeshData();
-    //LoadOBJMeshData("assets/f22.obj");
+    LoadPngTextureData("assets/f22.png");
 }
 
 void ProcessInput(void)
@@ -137,9 +136,9 @@ void Render(void)
         if (g_RenderMethod == RENDER_TEXTURED || g_RenderMethod == RENDER_TEXTURED_WIRE)
         {
             DrawTexturedTriangle(
-                triangle.points[0].x, triangle.points[0].y, triangle.texcoords[0].u, triangle.texcoords[0].v,
-                triangle.points[1].x, triangle.points[1].y, triangle.texcoords[1].u, triangle.texcoords[1].v,
-                triangle.points[2].x, triangle.points[2].y, triangle.texcoords[2].u, triangle.texcoords[2].v,
+                triangle.points[0].x, triangle.points[0].y, triangle.points[0].z, triangle.points[0].w, triangle.texcoords[0].u, triangle.texcoords[0].v,
+                triangle.points[1].x, triangle.points[1].y, triangle.points[1].z, triangle.points[1].w, triangle.texcoords[1].u, triangle.texcoords[1].v,
+                triangle.points[2].x, triangle.points[2].y, triangle.points[2].z, triangle.points[2].w, triangle.texcoords[2].u, triangle.texcoords[2].v,
                 g_MeshTexture);
         }
 
@@ -198,7 +197,9 @@ void Update(void)
     array_free(g_TrianglesToRender);
     g_TrianglesToRender = NULL;
 
-    g_Mesh.Rotation.y += 0.01f;
+    g_Mesh.Rotation.x += 0.05f;
+    //g_Mesh.Rotation.y += 0.1f;
+    //g_Mesh.Rotation.z += 0.1f;
 
     // temporary camera
     g_Mesh.Translation.z = 5.0f;
@@ -216,16 +217,16 @@ void Update(void)
         face_t meshFace = g_Mesh.Faces[i];
 
         vec3_t faceVertices[3];
-        faceVertices[0] = g_Mesh.Vertices[meshFace.a - 1];
-        faceVertices[1] = g_Mesh.Vertices[meshFace.b - 1];
-        faceVertices[2] = g_Mesh.Vertices[meshFace.c - 1];
+        faceVertices[0] = g_Mesh.Vertices[meshFace.a];
+        faceVertices[1] = g_Mesh.Vertices[meshFace.b];
+        faceVertices[2] = g_Mesh.Vertices[meshFace.c];
 
 
         vec4_t transformedVertices[3];
         // for each vertex in current face_t we will apply transformations
         for (int j = 0; j < 3; ++j)
         {
-            vec4_t transformedVertex = vec4From_vec3(faceVertices[j]);
+            vec4_t transformedVertex = vec4FromVec3(faceVertices[j]);
 
             mat4_t worldMatrix = mat4Identity();
             worldMatrix = mat4Mulmat4(scaleMatrix, worldMatrix);
@@ -244,9 +245,9 @@ void Update(void)
             transformedVertices[j] = transformedVertex;
         }
 
-        vec3_t vectorA = vec3From_vec4(transformedVertices[0]);
-        vec3_t vectorB = vec3From_vec4(transformedVertices[1]);
-        vec3_t vectorC = vec3From_vec4(transformedVertices[2]);
+        vec3_t vectorA = vec3FromVec4(transformedVertices[0]);
+        vec3_t vectorB = vec3FromVec4(transformedVertices[1]);
+        vec3_t vectorC = vec3FromVec4(transformedVertices[2]);
 
         vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
         vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
@@ -282,7 +283,7 @@ void Update(void)
             projectedPoints[j].y *= (g_WindowHeight / 2.0f);
 
             // Invert the x values to account for mirroring
-            projectedPoints[j].x = -projectedPoints[j].x;
+            //projectedPoints[j].x = -projectedPoints[j].x;
 
             // Invert the y values to account for flipped screen y coordinate
             projectedPoints[j].y = -projectedPoints[j].y;
@@ -339,6 +340,7 @@ void Update(void)
 void FreeResources(void)
 {
     free(g_ColorBuffer);
+    upng_free(g_PNG_texture);
     array_free(g_Mesh.Faces);
     array_free(g_Mesh.Vertices);
 }

@@ -28,29 +28,56 @@ vec3_t g_CubeVertices[NUM_CUBE_VERTICES] =
 face_t g_CubeFaces[NUM_CUBE_FACES] =
 {
     //front OK
-    {.a = 1, .b = 2, .c = 3, .a_uv = {0, 0}, .b_uv = {0, 1}, .c_uv = {1,1}, .color = 0xFFFF0000},
-    {.a = 1, .b = 3, .c = 4, .a_uv = {0, 0}, .b_uv = {1, 1}, .c_uv = {1,0}, .color = 0xFFFF0000},
+    {.a = 1, .b = 2, .c = 3, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFFFF0000},
+    {.a = 1, .b = 3, .c = 4, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFFFF0000},
 
     //right
-    {.a = 4, .b = 3, .c = 5, .a_uv = {0, 0}, .b_uv = {0, 1}, .c_uv = {1,1}, .color = 0xFF00FF00},
-    {.a = 4, .b = 5, .c = 6, .a_uv = {0, 0}, .b_uv = {1, 1}, .c_uv = {1,0}, .color = 0xFF00FF00},
+    {.a = 4, .b = 3, .c = 5, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFF00FF00},
+    {.a = 4, .b = 5, .c = 6, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFF00FF00},
 
     //back                   
-    {.a = 6, .b = 5, .c = 7, .a_uv = {0, 0}, .b_uv = {0, 1}, .c_uv = {1,1}, .color = 0xFF0000FF},
-    {.a = 6, .b = 7, .c = 8, .a_uv = {0, 0}, .b_uv = {1, 1}, .c_uv = {1,0}, .color = 0xFF0000FF},
+    {.a = 6, .b = 5, .c = 7, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFF0000FF},
+    {.a = 6, .b = 7, .c = 8, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFF0000FF},
 
     //left
-    {.a = 8, .b = 7, .c = 2, .a_uv = {0, 0}, .b_uv = {0, 1}, .c_uv = {1,1}, .color = 0xFFFFFF00},
-    {.a = 8, .b = 2, .c = 1, .a_uv = {0, 0}, .b_uv = {1, 1}, .c_uv = {1,0}, .color = 0xFFFFFF00},
+    {.a = 8, .b = 7, .c = 2, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFFFFFF00},
+    {.a = 8, .b = 2, .c = 1, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFFFFFF00},
 
     //top
-    {.a = 2, .b = 7, .c = 5, .a_uv = {0, 0}, .b_uv = {0, 1}, .c_uv = {1,1}, .color = 0xFFFF00FF},
-    {.a = 2, .b = 5, .c = 3, .a_uv = {0, 0}, .b_uv = {1, 1}, .c_uv = {1,0}, .color = 0xFFFF00FF},
+    {.a = 2, .b = 7, .c = 5, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFFFF00FF},
+    {.a = 2, .b = 5, .c = 3, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFFFF00FF},
 
     //bottom
-    {.a = 6, .b = 8, .c = 1, .a_uv = {0, 0}, .b_uv = {0, 1}, .c_uv = {1,1}, .color = 0xFF00FFFF},
-    {.a = 6, .b = 1, .c = 4, .a_uv = {0, 0}, .b_uv = {1, 1}, .c_uv = {1,0}, .color = 0xFF00FFFF},
+    {.a = 6, .b = 8, .c = 1, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFF00FFFF},
+    {.a = 6, .b = 1, .c = 4, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFF00FFFF},
 };
+
+//face_t g_CubeFaces[NUM_CUBE_FACES] =
+//{
+//    //front OK
+//    {.a = 1, .b = 2, .c = 3, .a_uv = {1, 1}, .b_uv = {1, 0}, .c_uv = {0,0}, .color = 0xFFFF0000},
+//    {.a = 1, .b = 3, .c = 4, .a_uv = {1, 1}, .b_uv = {0, 0}, .c_uv = {0,1}, .color = 0xFFFF0000},
+//
+//    //right
+//    {.a = 4, .b = 3, .c = 5, .a_uv = {1, 1}, .b_uv = {1, 0}, .c_uv = {0,0}, .color = 0xFF00FF00},
+//    {.a = 4, .b = 5, .c = 6, .a_uv = {1, 1}, .b_uv = {0, 0}, .c_uv = {0,1}, .color = 0xFF00FF00},
+//
+//    //back                   
+//    {.a = 6, .b = 5, .c = 7, .a_uv = {1, 1}, .b_uv = {1, 0}, .c_uv = {0,0}, .color = 0xFF0000FF},
+//    {.a = 6, .b = 7, .c = 8, .a_uv = {1, 1}, .b_uv = {0, 0}, .c_uv = {0,1}, .color = 0xFF0000FF},
+//
+//    //left
+//    {.a = 8, .b = 7, .c = 2, .a_uv = {1, 1}, .b_uv = {1, 0}, .c_uv = {0,0}, .color = 0xFFFFFF00},
+//    {.a = 8, .b = 2, .c = 1, .a_uv = {1, 1}, .b_uv = {0, 0}, .c_uv = {0,1}, .color = 0xFFFFFF00},
+//
+//    //top
+//    {.a = 2, .b = 7, .c = 5, .a_uv = {1, 1}, .b_uv = {1, 0}, .c_uv = {0,0}, .color = 0xFFFF00FF},
+//    {.a = 2, .b = 5, .c = 3, .a_uv = {1, 1}, .b_uv = {0, 0}, .c_uv = {0,1}, .color = 0xFFFF00FF},
+//
+//    //bottom
+//    {.a = 6, .b = 8, .c = 1, .a_uv = {1, 1}, .b_uv = {1, 0}, .c_uv = {0,0}, .color = 0xFF00FFFF},
+//    {.a = 6, .b = 1, .c = 4, .a_uv = {1, 1}, .b_uv = {0, 0}, .c_uv = {0,1}, .color = 0xFF00FFFF},
+//};
 
 void LoadCubeMeshData(void)
 {
@@ -74,6 +101,8 @@ void LoadOBJMeshData(const char* filename)
 
     char line[1024];
 
+    tex2_t* texcoords = NULL;
+
     while (fgets(line, 1024, file))
     {
         if (strncmp(line, "v ", 2) == 0)
@@ -82,18 +111,38 @@ void LoadOBJMeshData(const char* filename)
             sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
             array_push(g_Mesh.Vertices, vertex);
         }
+        else if (strncmp(line, "vt ", 3) == 0)
+        {
+            tex2_t texcoord;
+            sscanf(line, "vt %f %f", &texcoord.u, &texcoord.v);
+            array_push(texcoords, texcoord);
+        }
         else if (strncmp(line, "f ", 2) == 0)
         {
-            face_t face;
+            int vertex_indices[3];
             int texture_indices[3];
             int normalIndices[3];
             sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d", 
-                &face.a, &texture_indices[0], &normalIndices[0], 
-                &face.b, &texture_indices[1], &normalIndices[1], 
-                &face.c, &texture_indices[2], &normalIndices[2]);
+                &vertex_indices[0], &texture_indices[0], &normalIndices[0],
+                &vertex_indices[1], &texture_indices[1], &normalIndices[1],
+                &vertex_indices[2], &texture_indices[2], &normalIndices[2]);
+
+
+            face_t face =
+            {
+                .a = vertex_indices[0] - 1,
+                .b = vertex_indices[1] - 1,
+                .c = vertex_indices[2] - 1,
+                .a_uv = texcoords[texture_indices[0] - 1],
+                .b_uv = texcoords[texture_indices[1] - 1],
+                .c_uv = texcoords[texture_indices[2] - 1],
+                .color = 0xFFFFFFFF
+            };
 
             array_push(g_Mesh.Faces, face);
         }
 
     }
+
+    array_free(texcoords);
 }

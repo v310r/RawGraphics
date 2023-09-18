@@ -5,6 +5,22 @@ int g_TextureWidth = 64;
 int g_TextureHeight = 64;
 
 uint32_t* g_MeshTexture = NULL;
+upng_t* g_PNG_texture = NULL;
+
+void LoadPngTextureData(char* filename)
+{
+    g_PNG_texture = upng_new_from_file(filename);
+    if (g_PNG_texture)
+    {
+        upng_decode(g_PNG_texture);
+        if (upng_get_error(g_PNG_texture) == UPNG_EOK)
+        {
+            g_MeshTexture = (uint32_t*)upng_get_buffer(g_PNG_texture);
+            g_TextureWidth = upng_get_width(g_PNG_texture);
+            g_TextureHeight = upng_get_height(g_PNG_texture);
+        }
+    }
+}
 
 const uint8_t g_REDBRICK_TEXTURE[] =
 {

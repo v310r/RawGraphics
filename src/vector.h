@@ -60,8 +60,10 @@ vec3_t vec3RotateZ(vec3_t v, float angle);
 // Vector 4D functions
 ////////////////////////////////////
 
-vec4_t vec4From_vec3(vec3_t v);
+vec4_t vec4FromVec3(vec3_t v);
 
-vec3_t vec3From_vec4(vec4_t v);
+vec3_t vec3FromVec4(vec4_t v);
+
+vec2_t vec2FromVec4(vec4_t v);
 
 #endif
