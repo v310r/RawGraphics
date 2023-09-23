@@ -29,6 +29,7 @@ extern struct SDL_Window* g_Window;
 extern struct SDL_Renderer* g_Renderer;
 
 extern uint32_t* g_ColorBuffer;
+extern float* g_zBuffer;
 extern struct SDL_Texture* g_ColorBufferTexture;
 
 
@@ -41,6 +42,8 @@ void DrawLine(int x0, int y0, int x1, int y1, uint32_t color);
 void DrawPixel(int x, int y, uint32_t color);
 
 void ClearColorBuffer(uint32_t color);
+
+void ClearZBuffer(void);
 
 int InitGraphics(void);
 

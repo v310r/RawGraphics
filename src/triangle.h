@@ -22,7 +22,6 @@ typedef struct
     vec4_t points[3];
     tex2_t texcoords[3];
     uint32_t color;
-    float averageDepth;
 } triangle_t; // actual projected points onto the 2D screen
 
 void DrawTexel(
@@ -36,7 +35,17 @@ void DrawTexturedTriangle(
     int x2, int y2, float z2, float w2, float u2, float v2,
     uint32_t* texture);
 
-void DrawFilledTriangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color);
+void DrawTrianglePixel(
+    int x, int y,
+    uint32_t color,
+    vec4_t pointA, vec4_t pointB, vec4_t pointC);
+
+void DrawFilledTriangle(
+    int x0, int y0, float z0, float w0,
+    int x1, int y1, float z1, float w1,
+    int x2, int y2, float z2, float w2, 
+    uint32_t color);
+
 void DrawTriangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color);
 
 #endif

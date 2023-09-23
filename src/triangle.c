@@ -96,7 +96,9 @@ void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, ve
     vec2_t a = vec2FromVec4(pointA);
     vec2_t b = vec2FromVec4(pointB);
     vec2_t c = vec2FromVec4(pointC);
+
     vec3_t weights = GetBarycentricWeights(a, b, c, pointP);
+
     float alpha = weights.x;
     float beta = weights.y;
     float gamma = weights.z;
@@ -127,7 +129,6 @@ void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, ve
         textureX = 0;
     }
 
-
     if (textureY >= g_TextureHeight)
     {
         textureY = g_TextureHeight - 1;
@@ -138,7 +139,16 @@ void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, ve
         textureY = 0;
     }
 
-    DrawPixel(x, y, texture[(g_TextureWidth * textureY) + textureX]);
+    // Adjust 1/w so the pixels that are closer to the camera have smaller values
+    interpolated_reciprocal_w = 1.0f - interpolated_reciprocal_w;
+
+    if (interpolated_reciprocal_w < g_zBuffer[(g_WindowWidth * y) + x])
+    {
+        DrawPixel(x, y, texture[(g_TextureWidth * textureY) + textureX]);
+
+        g_zBuffer[(g_WindowWidth * y) + x] = interpolated_reciprocal_w;
+    }
+
 }
 
 void DrawTexturedTriangle(
@@ -265,46 +275,153 @@ void DrawTexturedTriangle(
     }
 }
 
-void DrawFilledTriangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color)
+void DrawTrianglePixel(
+    int x, int y,
+    uint32_t color,
+    vec4_t pointA, vec4_t pointB, vec4_t pointC)
+{
+    vec2_t pointP = { x, y };
+    vec2_t a = vec2FromVec4(pointA);
+    vec2_t b = vec2FromVec4(pointB);
+    vec2_t c = vec2FromVec4(pointC);
+
+    vec3_t weights = GetBarycentricWeights(a, b, c, pointP);
+
+    float alpha = weights.x;
+    float beta = weights.y;
+    float gamma = weights.z;
+
+    float interpolated_u;
+    float interpolated_v;
+    float interpolated_reciprocal_w;
+
+
+    interpolated_reciprocal_w = (1.0f / pointA.w) * alpha + (1.0f / pointB.w) * beta + (1.0f / pointC.w) * gamma;
+
+    // Adjust 1/w so the pixels that are closer to the camera have smaller values
+    interpolated_reciprocal_w = 1.0f - interpolated_reciprocal_w;
+
+    if (interpolated_reciprocal_w < g_zBuffer[(g_WindowWidth * y) + x])
+    {
+        DrawPixel(x, y, color);
+
+        g_zBuffer[(g_WindowWidth * y) + x] = interpolated_reciprocal_w;
+    }
+}
+
+void DrawFilledTriangle(
+    int x0, int y0, float z0, float w0,
+    int x1, int y1, float z1, float w1,
+    int x2, int y2, float z2, float w2,
+    uint32_t color)
 {
     // y0 < y1 < y2 (sorting)
     if (y0 > y1)
     {
         swapInt(&y0, &y1);
         swapInt(&x0, &x1);
+        swapFloat(&z0, &z1);
+        swapFloat(&w0, &w1);
     }
 
     if (y1 > y2)
     {
         swapInt(&y1, &y2);
         swapInt(&x1, &x2);
+        swapFloat(&z1, &z2);
+        swapFloat(&w1, &w2);
     }
 
     if (y0 > y1)
     {
         swapInt(&y0, &y1);
         swapInt(&x0, &x1);
+        swapFloat(&z0, &z1);
+        swapFloat(&w0, &w1);
     }
 
-    // finding Mx,My
+    vec4_t pointA = { x0, y0, z0, w0 };
+    vec4_t pointB = { x1, y1, z1, w1 };
+    vec4_t pointC = { x2, y2, z2, w2 };
 
-    if (y1 == y2)
+    // flat-bottom filling (basically top filling)
+    // 
+    // how much x changes when y is constantly increasing 1 by one (scanline)
+    float inverseSlope1 = 0.0f;
+    float inverseSlope2 = 0.0f;
+
+    if (y1 - y0 != 0)
     {
-        FillFlatBottomTriangle(x0, y0, x1, y1, x2, y2, color);
-        return;
+        inverseSlope1 = (float)(x1 - x0) / abs(y1 - y0);
     }
-    else if (y0 == y1)
+
+    if (y2 - y0 != 0)
     {
-        FillFlatTopTriangle(x0, y0, x1, y1, x2, y2, color);
-        return;
+        inverseSlope2 = (float)(x2 - x0) / abs(y2 - y0);
     }
 
-    int My = y1;
-    int Mx = (((float)(x2 - x0) * (y1 - y0)) / (float)(y2 - y0)) + x0;
+    if (y1 - y0 != 0)
+    {
+        for (int y = y0; y <= y1; ++y)
+        {
+            // just another formula
+            int xStart = x1 + (y - y1) * inverseSlope1;
+            int xEnd = x0 + (y - y0) * inverseSlope2;
 
-    FillFlatBottomTriangle(x0, y0, x1, y1, Mx, My, color);
+            if (xEnd < xStart)
+            {
+                swapInt(&xStart, &xEnd);
+            }
 
-    FillFlatTopTriangle(x1, y1, Mx, My, x2, y2, color);
+            for (int x = xStart; x < xEnd; ++x)
+            {
+                DrawTrianglePixel (x, y, color, pointA, pointB, pointC);
+            }
+        }
+    }
+
+    // flat-top filling (basically bottom filling)
+    // 
+    // how much x changes when y is constantly increasing 1 by one (scanline)
+    inverseSlope1 = 0.0f;
+    inverseSlope2 = 0.0f;
+
+    if (y2 - y1 != 0)
+    {
+        inverseSlope1 = (float)(x2 - x1) / abs(y2 - y1);
+    }
+
+    if (y2 - y0 != 0)
+    {
+        inverseSlope2 = (float)(x2 - x0) / abs(y2 - y0);
+    }
+
+    if (y2 - y1 != 0)
+    {
+        for (int y = y1; y <= y2; ++y)
+        {
+            // just another formula
+            int xStart = x1 + (y - y1) * inverseSlope1;
+            int xEnd = x0 + (y - y0) * inverseSlope2;
+
+            if (xEnd < xStart)
+            {
+                swapInt(&xStart, &xEnd);
+            }
+
+            for (int x = xStart; x < xEnd; ++x)
+            {
+                DrawTrianglePixel(x, y, color, pointA, pointB, pointC);
+            }
+        }
+    }
+
+    //int My = y1;
+    //int Mx = (((float)(x2 - x0) * (y1 - y0)) / (float)(y2 - y0)) + x0;
+
+    //FillFlatBottomTriangle(x0, y0, x1, y1, Mx, My, color);
+
+    //FillFlatTopTriangle(x1, y1, Mx, My, x2, y2, color);
 
 }
 

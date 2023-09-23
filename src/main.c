@@ -19,7 +19,9 @@ float g_PreviousFrameTime = 0; // ms
 
 vec3_t g_CameraPosition = { .x = 0.0f, .y = 0.0f, .z = 0.0f };
 
-triangle_t* g_TrianglesToRender = NULL;
+#define MAX_TRIANGLES_PER_MESH 10000
+triangle_t g_TrianglesToRender[MAX_TRIANGLES_PER_MESH];
+int g_numTrianglesToRender = 0;
 
 mat4_t g_PerspectiveProjectionMatrix;
 
@@ -32,6 +34,12 @@ void Setup(void)
     if (g_ColorBuffer == NULL)
     {
         SDL_Log("color buffer is NULL");
+    }
+
+    g_zBuffer = (float*)malloc(sizeof(float) * g_WindowWidth * g_WindowHeight);
+    if (g_zBuffer == NULL)
+    {
+        SDL_Log("z buffer is NULL");
     }
 
     g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, g_WindowWidth, g_WindowHeight);
@@ -115,21 +123,24 @@ void ProcessInput(void)
 
 void Render(void)
 {
+    SDL_RenderClear(g_Renderer);
+
     SDL_UpdateTexture(g_ColorBufferTexture, NULL, g_ColorBuffer, (int)(sizeof(uint32_t) * g_WindowWidth));
     SDL_RenderCopy(g_Renderer, g_ColorBufferTexture, NULL, NULL);
 
     ClearColorBuffer(0xFF808080);
+    ClearZBuffer();
 
-    for (int i = 0; i < array_length(g_TrianglesToRender); ++i)
+    for (int i = 0; i < g_numTrianglesToRender; ++i)
     {
         triangle_t triangle = g_TrianglesToRender[i];
 
         if (g_RenderMethod == RENDER_FILL_TRIANGLE || g_RenderMethod == RENDER_FILL_TRIANGLE_WIRE)
         {
             DrawFilledTriangle(
-                triangle.points[0].x, triangle.points[0].y, // vertex A
-                triangle.points[1].x, triangle.points[1].y, // vertex B
-                triangle.points[2].x, triangle.points[2].y, // vertex C
+                triangle.points[0].x, triangle.points[0].y, triangle.points[0].z, triangle.points[0].w, // vertex A
+                triangle.points[1].x, triangle.points[1].y, triangle.points[1].z, triangle.points[1].w, // vertex B
+                triangle.points[2].x, triangle.points[2].y, triangle.points[2].z, triangle.points[2].w, // vertex C
                 triangle.color);
         }
 
@@ -158,7 +169,6 @@ void Render(void)
             DrawRectangle(triangle.points[2].x, triangle.points[2].y, 6, 6, 0xFFFF0000);
         }
     }
-
 
     SDL_RenderPresent(g_Renderer);
 }
@@ -194,8 +204,7 @@ void Update(void)
 
     g_PreviousFrameTime = currentFrameTime;
 
-    array_free(g_TrianglesToRender);
-    g_TrianglesToRender = NULL;
+    g_numTrianglesToRender = 0;
 
     g_Mesh.Rotation.x += 0.05f;
     //g_Mesh.Rotation.y += 0.1f;
@@ -295,10 +304,6 @@ void Update(void)
 
 
         }
-        
-        // Depth calculation
-
-        float averageDepth = (transformedVertices[0].z + transformedVertices[1].z + transformedVertices[2].z) / 3.0f;
 
         triangle_t projectedTriangle =
         {
@@ -314,25 +319,12 @@ void Update(void)
                 {meshFace.c_uv.u, meshFace.c_uv.v},
             },
 
-            .color = meshFace.color,
-            .averageDepth = averageDepth
+            .color = meshFace.color
         };
 
-        array_push(g_TrianglesToRender, projectedTriangle);
-    }
-
-    // sorting triangles by depth
-    uint32_t numOfTriangles = array_length(g_TrianglesToRender);
-    for (int i = 0; i < numOfTriangles; ++i)
-    {
-        for (int j = i + 1; j < numOfTriangles; ++j)
+        if (g_numTrianglesToRender < MAX_TRIANGLES_PER_MESH)
         {
-            if (g_TrianglesToRender[i].averageDepth < g_TrianglesToRender[j].averageDepth)
-            {
-                triangle_t temp = g_TrianglesToRender[i];
-                g_TrianglesToRender[i] = g_TrianglesToRender[j];
-                g_TrianglesToRender[j] = temp;
-            }
+            g_TrianglesToRender[g_numTrianglesToRender++] = projectedTriangle;
         }
     }
 }
@@ -340,6 +332,7 @@ void Update(void)
 void FreeResources(void)
 {
     free(g_ColorBuffer);
+    free(g_zBuffer);
     upng_free(g_PNG_texture);
     array_free(g_Mesh.Faces);
     array_free(g_Mesh.Vertices);

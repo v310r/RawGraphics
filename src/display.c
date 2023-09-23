@@ -9,6 +9,7 @@ SDL_Window* g_Window = NULL;
 SDL_Renderer* g_Renderer = NULL;
 
 uint32_t* g_ColorBuffer = NULL;
+float* g_zBuffer = NULL;
 SDL_Texture* g_ColorBufferTexture = NULL;
 
 void DrawGrid(uint32_t color, int strideX, int strideY)
@@ -81,7 +82,17 @@ void ClearColorBuffer(uint32_t color)
         {
             g_ColorBuffer[(g_WindowWidth * y) + x] = color;
         }
+    }
+}
 
+void ClearZBuffer(void)
+{
+    for (int y = 0; y < g_WindowHeight; ++y)
+    {
+        for (int x = 0; x < g_WindowWidth; ++x)
+        {
+            g_zBuffer[(g_WindowWidth * y) + x] = 1.0f;
+        }
     }
 }
 
