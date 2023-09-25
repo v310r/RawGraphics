@@ -27,4 +27,6 @@ mat4_t mat4Mulmat4(mat4_t a, mat4_t b);
 mat4_t mat4MakePerspective(float fov, float aspect, float znear, float zfar);
 vec4_t mat4MulVec4PerspectiveProjection(mat4_t projectionMatrix, vec4_t v);
 
+mat4_t mat4LookAt(vec3_t eye, vec3_t target, vec3_t up);
+
 #endif

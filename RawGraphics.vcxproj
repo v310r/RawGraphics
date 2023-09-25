@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\array.c" />
+    <ClCompile Include="src\camera.c" />
     <ClCompile Include="src\display.c" />
     <ClCompile Include="src\light.c" />
     <ClCompile Include="src\main.c" />
@@ -38,6 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\array.h" />
+    <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\display.h" />
     <ClInclude Include="src\light.h" />
     <ClInclude Include="src\matrix.h" />

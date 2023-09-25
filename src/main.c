@@ -11,19 +11,20 @@
 #include "light.h"
 #include "texture.h"
 #include "upng.h"
+#include "camera.h"
 
 
 bool g_bGameRunning = true;
 
-float g_PreviousFrameTime = 0; // ms
-
-vec3_t g_CameraPosition = { .x = 0.0f, .y = 0.0f, .z = 0.0f };
+float g_PreviousFrameTime = 0.0f; // ms
+float g_DeltaTime = 0.0f;
 
 #define MAX_TRIANGLES_PER_MESH 10000
 triangle_t g_TrianglesToRender[MAX_TRIANGLES_PER_MESH];
 int g_numTrianglesToRender = 0;
 
 mat4_t g_PerspectiveProjectionMatrix;
+mat4_t g_ViewMatrix;
 
 void Setup(void)
 {
@@ -111,9 +112,41 @@ void ProcessInput(void)
                 g_CullMethod = CULL_BACKFACE;
             }
 
-            if (ev.key.keysym.sym == SDLK_d)
+            if (ev.key.keysym.sym == SDLK_x)
             {
                 g_CullMethod = CULL_NONE;
+            }
+
+            if (ev.key.keysym.sym == SDLK_w)
+            {
+                g_Camera.forwardVelocity = vec3Mul(g_Camera.direction, 5.0f * g_DeltaTime);
+                g_Camera.position = vec3Add(g_Camera.position, g_Camera.forwardVelocity);
+            }
+
+            if (ev.key.keysym.sym == SDLK_s)
+            {
+                g_Camera.forwardVelocity = vec3Mul(g_Camera.direction, 5.0f * g_DeltaTime);
+                g_Camera.position = vec3Sub(g_Camera.position, g_Camera.forwardVelocity);
+            }
+
+            if (ev.key.keysym.sym == SDLK_a)
+            {
+                g_Camera.yaw -= 1.0f * g_DeltaTime;
+            }
+
+            if (ev.key.keysym.sym == SDLK_d)
+            {
+                g_Camera.yaw += 1.0f * g_DeltaTime;
+            }
+
+            if (ev.key.keysym.sym == SDLK_UP)
+            {
+                g_Camera.position.y += 3.0f * g_DeltaTime;
+            }
+
+            if (ev.key.keysym.sym == SDLK_DOWN)
+            {
+                g_Camera.position.y -= 3.0f * g_DeltaTime;
             }
 
             break;
@@ -202,16 +235,29 @@ void Update(void)
         SDL_Delay(delayTime);
     }
 
+    g_DeltaTime = (SDL_GetTicks() - g_PreviousFrameTime) / 1000.0f; // sec
+
     g_PreviousFrameTime = currentFrameTime;
 
     g_numTrianglesToRender = 0;
 
-    g_Mesh.Rotation.x += 0.05f;
-    //g_Mesh.Rotation.y += 0.1f;
-    //g_Mesh.Rotation.z += 0.1f;
+    //g_Mesh.Rotation.x += 0.05f * g_DeltaTime;
+    //g_Mesh.Rotation.y += 0.1f * g_DeltaTime;
+    //g_Mesh.Rotation.z += 0.1f * g_DeltaTime;
 
     // temporary camera
     g_Mesh.Translation.z = 5.0f;
+
+    //g_Camera.position.x += 0.08f * g_DeltaTime;
+
+    vec3_t target = { 0.0f, 0.0f, 1.0f };
+    mat4_t cameraYawRotation = mat4MakeRotationY(g_Camera.yaw);
+    g_Camera.direction = vec3FromVec4(mat4Mulvec4(cameraYawRotation, vec4FromVec3(target)));
+
+    target = vec3Add(g_Camera.position, g_Camera.direction);
+    vec3_t upVector = { 0.0f, 1.0f, 0.0f };
+
+    g_ViewMatrix = mat4LookAt(g_Camera.position, target, upVector);
 
     mat4_t scaleMatrix = mat4MakeScale(g_Mesh.Scale.x, g_Mesh.Scale.y, g_Mesh.Scale.z);
     mat4_t translationMatrix = mat4MakeTranslation(g_Mesh.Translation.x, g_Mesh.Translation.y, g_Mesh.Translation.z);
@@ -246,6 +292,7 @@ void Update(void)
 
             transformedVertex = mat4Mulvec4(worldMatrix, transformedVertex);
 
+            transformedVertex = mat4Mulvec4(g_ViewMatrix, transformedVertex);
 
             //transformedVertex = vec3RotateX(transformedVertex, g_Mesh.Rotation.y);
             //transformedVertex = vec3RotateY(transformedVertex, g_Mesh.Rotation.y);
@@ -263,7 +310,8 @@ void Update(void)
 
         vec3_t normal = vec3Normalize(vec3Cross(vectorAB, vectorAC));
 
-        vec3_t cameraRay = vec3Sub(g_CameraPosition, vectorA);
+        vec3_t origin = { 0.0f, 0.0f, 0.0f };
+        vec3_t cameraRay = vec3Sub(origin, vectorA);
 
         float dotNormalCamera = vec3Dot(cameraRay, normal);
 

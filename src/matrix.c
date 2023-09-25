@@ -155,3 +155,24 @@ vec4_t mat4MulVec4PerspectiveProjection(mat4_t projectionMatrix, vec4_t v)
 
     return result;
 }
+
+mat4_t mat4LookAt(vec3_t eye, vec3_t target, vec3_t up)
+{
+    vec3_t z = vec3Sub(target, eye);
+    z = vec3Normalize(z);
+    vec3_t x = vec3Cross(up, z);
+    x = vec3Normalize(x);
+    vec3_t y = vec3Cross(z, x);
+
+    mat4_t viewMatrix =
+    {
+        {
+            { x.x, x.y, x.z,    -vec3Dot(x, eye) },
+            { y.x, y.y, y.z,    -vec3Dot(y, eye) },
+            { z.x, z.y, z.z,    -vec3Dot(z, eye) },
+            { 0.0f, 0.0f, 0.0f,                1 }
+        }
+    };
+
+    return viewMatrix;
+}
