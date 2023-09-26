@@ -12,6 +12,7 @@
 #include "texture.h"
 #include "upng.h"
 #include "camera.h"
+#include "clipping.h"
 
 
 bool g_bGameRunning = true;
@@ -49,11 +50,16 @@ void Setup(void)
         SDL_Log("Error SDL_CreateTexture() failed");
     }
 
-    const float fov = M_PI / 3.0f; // 60 degrees = 60 * PI / 180
-    const float aspectRation = (float)g_WindowHeight / (float)g_WindowWidth;
-    const float znear = 0.1f;
-    const float zfar = 100.0f;
-    g_PerspectiveProjectionMatrix = mat4MakePerspective(fov, aspectRation, znear, zfar);
+    const float aspectRationY = (float)g_WindowHeight / (float)g_WindowWidth;
+    const float aspectRationX = (float)g_WindowWidth / (float)g_WindowHeight;
+    const float fovY = M_PI / 3.0f; // 60 degrees = 60 * PI / 180
+    const float fovX = atan(tan(fovY / 2.0f) * aspectRationX) * 2.0f;
+
+    const float zNear = 0.1f;
+    const float zFar = 100.0f;
+    g_PerspectiveProjectionMatrix = mat4MakePerspective(fovY, aspectRationY, zNear, zFar);
+
+    InitFrustumPlanes(fovX, fovY, zNear, zFar);
 
     //LoadCubeMeshData();
     LoadOBJMeshData("assets/f22.obj");
@@ -75,81 +81,94 @@ void ProcessInput(void)
             if (ev.key.keysym.sym == SDLK_ESCAPE)
             {
                 g_bGameRunning = false;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_1)
             {
                 g_RenderMethod = RENDER_WIRE_VERTEX;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_2)
             {
                 g_RenderMethod = RENDER_WIRE;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_3)
             {
                 g_RenderMethod = RENDER_FILL_TRIANGLE;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_4)
             {
                 g_RenderMethod = RENDER_FILL_TRIANGLE_WIRE;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_5)
             {
                 g_RenderMethod = RENDER_TEXTURED;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_6)
             {
                 g_RenderMethod = RENDER_TEXTURED_WIRE;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_c)
             {
                 g_CullMethod = CULL_BACKFACE;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_x)
             {
                 g_CullMethod = CULL_NONE;
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_w)
             {
-                g_Camera.forwardVelocity = vec3Mul(g_Camera.direction, 5.0f * g_DeltaTime);
-                g_Camera.position = vec3Add(g_Camera.position, g_Camera.forwardVelocity);
+                rotateCameraPitch(-3.0f * g_DeltaTime);
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_s)
             {
-                g_Camera.forwardVelocity = vec3Mul(g_Camera.direction, 5.0f * g_DeltaTime);
-                g_Camera.position = vec3Sub(g_Camera.position, g_Camera.forwardVelocity);
+                rotateCameraPitch(3.0f * g_DeltaTime);
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_a)
             {
-                g_Camera.yaw -= 1.0f * g_DeltaTime;
+                rotateCameraYaw(-1.0f * g_DeltaTime);
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_d)
             {
-                g_Camera.yaw += 1.0f * g_DeltaTime;
+                rotateCameraYaw(1.0f * g_DeltaTime);
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_UP)
             {
-                g_Camera.position.y += 3.0f * g_DeltaTime;
+                UpdateCameraForwardVelocity(vec3Mul(GetCameraDirection(), 5.0f * g_DeltaTime));
+                UpdateCameraPosition(vec3Add(GetCameraPosition(), GetCameraForwardVelocity()));
+                break;
             }
 
             if (ev.key.keysym.sym == SDLK_DOWN)
             {
-                g_Camera.position.y -= 3.0f * g_DeltaTime;
+                UpdateCameraForwardVelocity(vec3Mul(GetCameraDirection(), 5.0f * g_DeltaTime));
+                UpdateCameraPosition(vec3Sub(GetCameraPosition(), GetCameraForwardVelocity()));
+                break;
             }
-
-            break;
         }
     }
 }
@@ -250,14 +269,10 @@ void Update(void)
 
     //g_Camera.position.x += 0.08f * g_DeltaTime;
 
-    vec3_t target = { 0.0f, 0.0f, 1.0f };
-    mat4_t cameraYawRotation = mat4MakeRotationY(g_Camera.yaw);
-    g_Camera.direction = vec3FromVec4(mat4Mulvec4(cameraYawRotation, vec4FromVec3(target)));
-
-    target = vec3Add(g_Camera.position, g_Camera.direction);
+    vec3_t target = GetCameraLookAtTarget();
     vec3_t upVector = { 0.0f, 1.0f, 0.0f };
 
-    g_ViewMatrix = mat4LookAt(g_Camera.position, target, upVector);
+    g_ViewMatrix = mat4LookAt(GetCameraPosition(), target, upVector);
 
     mat4_t scaleMatrix = mat4MakeScale(g_Mesh.Scale.x, g_Mesh.Scale.y, g_Mesh.Scale.z);
     mat4_t translationMatrix = mat4MakeTranslation(g_Mesh.Translation.x, g_Mesh.Translation.y, g_Mesh.Translation.z);
@@ -326,53 +341,78 @@ void Update(void)
         float intensityPercentage = (dotNormalLight * 0.5f) + 0.5;
         meshFace.color = ApplyLightIntensity(meshFace.color, intensityPercentage);
 
+        polygon_t polygon = CreatePolygonFromTriangle(
+            vec3FromVec4(transformedVertices[0]), 
+            vec3FromVec4(transformedVertices[1]), 
+            vec3FromVec4(transformedVertices[2]),
+            meshFace.a_uv,
+            meshFace.b_uv,
+            meshFace.c_uv);
 
-        // perspective projection application and perspective divide
-        vec4_t projectedPoints[3];
-        for (int j = 0; j < 3; ++j)
+        clipPolygon(&polygon);
+
+        //SDL_Log("Number of polygon vertices after clipping: %d", polygon.numVertices);
+
+        triangle_t trianglesAfterClipping[MAX_NUM_POLY_TRIANGLES];
+        int numTrianglesAfterClipping = 0;
+
+        GetTrianglesFromPolygon(&polygon, trianglesAfterClipping, &numTrianglesAfterClipping);
+
+        for (int t = 0; t < numTrianglesAfterClipping; ++t)
         {
-            projectedPoints[j] = mat4MulVec4PerspectiveProjection(g_PerspectiveProjectionMatrix, transformedVertices[j]);
-            //vec2_t projectedPoint = ProjectOrthographic(transformedVertex);
-
-
-            //scale into the view
-            projectedPoints[j].x *= (g_WindowWidth / 2.0f);
-            projectedPoints[j].y *= (g_WindowHeight / 2.0f);
-
-            // Invert the x values to account for mirroring
-            //projectedPoints[j].x = -projectedPoints[j].x;
-
-            // Invert the y values to account for flipped screen y coordinate
-            projectedPoints[j].y = -projectedPoints[j].y;
-
-
-            // translate projected points to the middle of the screen
-            projectedPoints[j].x += (g_WindowWidth / 2.0f);
-            projectedPoints[j].y += (g_WindowHeight / 2.0f);
-
-
-        }
-
-        triangle_t projectedTriangle =
-        {
-            .points =
+            triangle_t triangleAfterClipping = trianglesAfterClipping[t];
+            // perspective projection application and perspective divide
+            vec4_t projectedPoints[3];
+            for (int j = 0; j < 3; ++j)
             {
-                projectedPoints[0], projectedPoints[1], projectedPoints[2]
-            },
+                projectedPoints[j] = mat4Mulvec4(g_PerspectiveProjectionMatrix, triangleAfterClipping.points[j]);
+                //perspective divide after applying the projection matrix
+                if (projectedPoints[j].w != 0.0f)
+                {
+                    projectedPoints[j].x /= projectedPoints[j].w;
+                    projectedPoints[j].y /= projectedPoints[j].w;
+                    projectedPoints[j].z /= projectedPoints[j].w;
+                }
 
-            .texcoords =
+                //scale into the view
+                projectedPoints[j].x *= (g_WindowWidth / 2.0f);
+                projectedPoints[j].y *= (g_WindowHeight / 2.0f);
+
+                // Invert the x values to account for mirroring
+                //projectedPoints[j].x = -projectedPoints[j].x;
+
+                // Invert the y values to account for flipped screen y coordinate
+                projectedPoints[j].y = -projectedPoints[j].y;
+
+
+                // translate projected points to the middle of the screen
+                projectedPoints[j].x += (g_WindowWidth / 2.0f);
+                projectedPoints[j].y += (g_WindowHeight / 2.0f);
+
+
+            }
+
+            triangle_t triangleToRender =
             {
-                {meshFace.a_uv.u, meshFace.a_uv.v},
-                {meshFace.b_uv.u, meshFace.b_uv.v},
-                {meshFace.c_uv.u, meshFace.c_uv.v},
-            },
+                .points =
+                {
+                    projectedPoints[0], projectedPoints[1], projectedPoints[2]
+                },
 
-            .color = meshFace.color
-        };
+                .texcoords =
+                {
+                    {triangleAfterClipping.texcoords[0].u, triangleAfterClipping.texcoords[0].v},
+                    {triangleAfterClipping.texcoords[1].u, triangleAfterClipping.texcoords[1].v},
+                    {triangleAfterClipping.texcoords[2].u, triangleAfterClipping.texcoords[2].v}
+                },
 
-        if (g_numTrianglesToRender < MAX_TRIANGLES_PER_MESH)
-        {
-            g_TrianglesToRender[g_numTrianglesToRender++] = projectedTriangle;
+                .color = meshFace.color
+            };
+
+            if (g_numTrianglesToRender < MAX_TRIANGLES_PER_MESH)
+            {
+                g_TrianglesToRender[g_numTrianglesToRender++] = triangleToRender;
+            }
         }
     }
 }

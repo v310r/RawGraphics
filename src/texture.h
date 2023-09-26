@@ -22,4 +22,6 @@ extern upng_t* g_PNG_texture;
 
 void LoadPngTextureData(char* filename);
 
+tex2_t tex2Clone(tex2_t* t);
+
 #endif

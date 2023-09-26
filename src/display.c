@@ -76,23 +76,17 @@ void DrawPixel(int x, int y, uint32_t color)
 
 void ClearColorBuffer(uint32_t color)
 {
-    for (int y = 0; y < g_WindowHeight; ++y)
+    for (int i = 0; i < g_WindowWidth * g_WindowHeight; ++i)
     {
-        for (int x = 0; x < g_WindowWidth; ++x)
-        {
-            g_ColorBuffer[(g_WindowWidth * y) + x] = color;
-        }
+        g_ColorBuffer[i] = color;
     }
 }
 
 void ClearZBuffer(void)
 {
-    for (int y = 0; y < g_WindowHeight; ++y)
+    for (int i = 0; i < g_WindowWidth * g_WindowHeight; ++i)
     {
-        for (int x = 0; x < g_WindowWidth; ++x)
-        {
-            g_zBuffer[(g_WindowWidth * y) + x] = 1.0f;
-        }
+        g_zBuffer[i] = 1.0f;
     }
 }
 

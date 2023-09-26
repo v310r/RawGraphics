@@ -25,6 +25,8 @@ typedef struct
 // Vector 2D functions
 ////////////////////////////////////
 
+vec2_t vec2New(float x, float y);
+
 float vec2Length(vec2_t v);
 
 vec2_t vec2Add(vec2_t a, vec2_t b);
@@ -39,6 +41,10 @@ vec2_t vec2Normalize(vec2_t v);
 ////////////////////////////////////
 // Vector 3D functions
 ////////////////////////////////////
+
+vec3_t vec3New(float x, float y, float z);
+
+vec3_t vec3Clone(vec3_t* v);
 
 float vec3Length(vec3_t v);
 

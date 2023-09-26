@@ -142,13 +142,15 @@ void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, ve
     // Adjust 1/w so the pixels that are closer to the camera have smaller values
     interpolated_reciprocal_w = 1.0f - interpolated_reciprocal_w;
 
-    if (interpolated_reciprocal_w < g_zBuffer[(g_WindowWidth * y) + x])
+    if (y < g_WindowHeight && x < g_WindowWidth && y >= 0 && x >= 0)
     {
-        DrawPixel(x, y, texture[(g_TextureWidth * textureY) + textureX]);
+        if (interpolated_reciprocal_w < g_zBuffer[(g_WindowWidth * y) + x])
+        {
+            DrawPixel(x, y, texture[(g_TextureWidth * textureY) + textureX]);
 
-        g_zBuffer[(g_WindowWidth * y) + x] = interpolated_reciprocal_w;
+            g_zBuffer[(g_WindowWidth * y) + x] = interpolated_reciprocal_w;
+        }
     }
-
 }
 
 void DrawTexturedTriangle(
@@ -301,12 +303,16 @@ void DrawTrianglePixel(
     // Adjust 1/w so the pixels that are closer to the camera have smaller values
     interpolated_reciprocal_w = 1.0f - interpolated_reciprocal_w;
 
-    if (interpolated_reciprocal_w < g_zBuffer[(g_WindowWidth * y) + x])
+    if (y < g_WindowHeight && x < g_WindowWidth && y >= 0 && x >= 0)
     {
-        DrawPixel(x, y, color);
+        if (interpolated_reciprocal_w < g_zBuffer[(g_WindowWidth * y) + x])
+        {
+            DrawPixel(x, y, color);
 
-        g_zBuffer[(g_WindowWidth * y) + x] = interpolated_reciprocal_w;
+            g_zBuffer[(g_WindowWidth * y) + x] = interpolated_reciprocal_w;
+        }
     }
+
 }
 
 void DrawFilledTriangle(
