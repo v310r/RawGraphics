@@ -90,7 +90,7 @@ vec3_t GetBarycentricWeights(vec2_t a, vec2_t b, vec2_t c, vec2_t p)
     return weights;
 }
 
-void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, vec4_t pointC, tex2_t a_uv, tex2_t b_uv, tex2_t c_uv)
+void DrawTexel(int x, int y, upng_t* texture, vec4_t pointA, vec4_t pointB, vec4_t pointC, tex2_t a_uv, tex2_t b_uv, tex2_t c_uv)
 {
     vec2_t pointP = { x, y };
     vec2_t a = vec2FromVec4(pointA);
@@ -116,12 +116,15 @@ void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, ve
     interpolated_u /= interpolated_reciprocal_w;
     interpolated_v /= interpolated_reciprocal_w;
 
-    int textureX = interpolated_u * g_TextureWidth;
-    int textureY = interpolated_v * g_TextureHeight;
+    int textureWidth = upng_get_width(texture);
+    int textureHeight = upng_get_height(texture);
 
-    if (textureX >= g_TextureWidth)
+    int textureX = interpolated_u * textureWidth;
+    int textureY = interpolated_v * textureHeight;
+
+    if (textureX >= textureWidth)
     {
-        textureX = g_TextureWidth - 1;
+        textureX = textureWidth - 1;
     }
 
     if (textureX < 0)
@@ -129,9 +132,9 @@ void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, ve
         textureX = 0;
     }
 
-    if (textureY >= g_TextureHeight)
+    if (textureY >= textureHeight)
     {
-        textureY = g_TextureHeight - 1;
+        textureY = textureHeight - 1;
     }
 
     if (textureY < 0)
@@ -146,7 +149,9 @@ void DrawTexel(int x, int y, uint32_t* texture, vec4_t pointA, vec4_t pointB, ve
     {
         if (interpolated_reciprocal_w < g_zBuffer[(g_WindowWidth * y) + x])
         {
-            DrawPixel(x, y, texture[(g_TextureWidth * textureY) + textureX]);
+            uint32_t* textureBuffer = (uint32_t*)upng_get_buffer(texture);
+
+            DrawPixel(x, y, textureBuffer[(textureWidth * textureY) + textureX]);
 
             g_zBuffer[(g_WindowWidth * y) + x] = interpolated_reciprocal_w;
         }
@@ -157,7 +162,7 @@ void DrawTexturedTriangle(
     int x0, int y0, float z0, float w0, float u0, float v0,
     int x1, int y1, float z1, float w1, float u1, float v1,
     int x2, int y2, float z2, float w2, float u2, float v2,
-    uint32_t* texture)
+    upng_t* texture)
 {
     // y0 < y1 < y2 (sorting)
     if (y0 > y1)

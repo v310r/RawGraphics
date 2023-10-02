@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <assert.h>
+
 #include "SDL.h"
+
 #include "display.h"
 #include "vector.h"
 #include "triangle.h"
@@ -61,10 +64,9 @@ void Setup(void)
 
     InitFrustumPlanes(fovX, fovY, zNear, zFar);
 
-    //LoadCubeMeshData();
-    LoadOBJMeshData("assets/f22.obj");
+    LoadMesh("assets/f22.obj", "assets/f22.png", vec3New(1.0f, 1.0f, 1.0f), vec3New(-3.0f, 0.0f, 8.0f), vec3New(0.0f, 0.0f, 0.0f));
+    LoadMesh("assets/f22.obj", "assets/f22.png", vec3New(1.0f, 1.0f, 1.0f), vec3New(3.0f, 0.0f, 8.0f), vec3New(0.0f, 0.0f, 0.0f));
 
-    LoadPngTextureData("assets/f22.png");
 }
 
 void ProcessInput(void)
@@ -202,7 +204,7 @@ void Render(void)
                 triangle.points[0].x, triangle.points[0].y, triangle.points[0].z, triangle.points[0].w, triangle.texcoords[0].u, triangle.texcoords[0].v,
                 triangle.points[1].x, triangle.points[1].y, triangle.points[1].z, triangle.points[1].w, triangle.texcoords[1].u, triangle.texcoords[1].v,
                 triangle.points[2].x, triangle.points[2].y, triangle.points[2].z, triangle.points[2].w, triangle.texcoords[2].u, triangle.texcoords[2].v,
-                g_MeshTexture);
+                triangle.texture);
         }
 
         if (g_RenderMethod == RENDER_WIRE || g_RenderMethod == RENDER_WIRE_VERTEX || g_RenderMethod == RENDER_FILL_TRIANGLE_WIRE || g_RenderMethod == RENDER_TEXTURED_WIRE)
@@ -260,12 +262,12 @@ void Update(void)
 
     g_numTrianglesToRender = 0;
 
-    //g_Mesh.Rotation.x += 0.05f * g_DeltaTime;
-    //g_Mesh.Rotation.y += 0.1f * g_DeltaTime;
-    //g_Mesh.Rotation.z += 0.1f * g_DeltaTime;
+    //mesh->Rotation.x += 0.05f * g_DeltaTime;
+    //mesh->Rotation.y += 0.1f * g_DeltaTime;
+    //mesh->Rotation.z += 0.1f * g_DeltaTime;
 
     // temporary camera
-    g_Mesh.Translation.z = 5.0f;
+    //mesh->Translation.z = 5.0f;
 
     //g_Camera.position.x += 0.08f * g_DeltaTime;
 
@@ -274,144 +276,155 @@ void Update(void)
 
     g_ViewMatrix = mat4LookAt(GetCameraPosition(), target, upVector);
 
-    mat4_t scaleMatrix = mat4MakeScale(g_Mesh.Scale.x, g_Mesh.Scale.y, g_Mesh.Scale.z);
-    mat4_t translationMatrix = mat4MakeTranslation(g_Mesh.Translation.x, g_Mesh.Translation.y, g_Mesh.Translation.z);
-    mat4_t rotationMatrix_X = mat4MakeRotationX(g_Mesh.Rotation.x);
-    mat4_t rotationMatrix_Y = mat4MakeRotationY(g_Mesh.Rotation.y);
-    mat4_t rotationMatrix_Z = mat4MakeRotationZ(g_Mesh.Rotation.z);
-
-
-    int numberOfFaces = array_length(g_Mesh.Faces);
-    for (int i = 0; i < numberOfFaces; ++i)
+    for (int meshIndex = 0; meshIndex < GetNumMeshes(); ++meshIndex)
     {
-        face_t meshFace = g_Mesh.Faces[i];
-
-        vec3_t faceVertices[3];
-        faceVertices[0] = g_Mesh.Vertices[meshFace.a];
-        faceVertices[1] = g_Mesh.Vertices[meshFace.b];
-        faceVertices[2] = g_Mesh.Vertices[meshFace.c];
-
-
-        vec4_t transformedVertices[3];
-        // for each vertex in current face_t we will apply transformations
-        for (int j = 0; j < 3; ++j)
+        mesh_t* mesh = GetMesh(meshIndex);
+        if (mesh == NULL)
         {
-            vec4_t transformedVertex = vec4FromVec3(faceVertices[j]);
-
-            mat4_t worldMatrix = mat4Identity();
-            worldMatrix = mat4Mulmat4(scaleMatrix, worldMatrix);
-            worldMatrix = mat4Mulmat4(rotationMatrix_X, worldMatrix);
-            worldMatrix = mat4Mulmat4(rotationMatrix_Y, worldMatrix);
-            worldMatrix = mat4Mulmat4(rotationMatrix_Z, worldMatrix);
-            worldMatrix = mat4Mulmat4(translationMatrix, worldMatrix);
-
-            transformedVertex = mat4Mulvec4(worldMatrix, transformedVertex);
-
-            transformedVertex = mat4Mulvec4(g_ViewMatrix, transformedVertex);
-
-            //transformedVertex = vec3RotateX(transformedVertex, g_Mesh.Rotation.y);
-            //transformedVertex = vec3RotateY(transformedVertex, g_Mesh.Rotation.y);
-            //transformedVertex = vec3RotateZ(transformedVertex, g_Mesh.Rotation.y);
-
-            transformedVertices[j] = transformedVertex;
-        }
-
-        vec3_t vectorA = vec3FromVec4(transformedVertices[0]);
-        vec3_t vectorB = vec3FromVec4(transformedVertices[1]);
-        vec3_t vectorC = vec3FromVec4(transformedVertices[2]);
-
-        vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
-        vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
-
-        vec3_t normal = vec3Normalize(vec3Cross(vectorAB, vectorAC));
-
-        vec3_t origin = { 0.0f, 0.0f, 0.0f };
-        vec3_t cameraRay = vec3Sub(origin, vectorA);
-
-        float dotNormalCamera = vec3Dot(cameraRay, normal);
-
-        if (g_CullMethod == CULL_BACKFACE && dotNormalCamera < 0)
-        {
-            // we will not render faces that we do not see
+            assert(NULL);
             continue;
         }
 
-        //light calculation
-        float dotNormalLight = vec3Dot(g_DirectionalLight.Direction, normal);
-        float intensityPercentage = (dotNormalLight * 0.5f) + 0.5;
-        meshFace.color = ApplyLightIntensity(meshFace.color, intensityPercentage);
+        mat4_t scaleMatrix = mat4MakeScale(mesh->Scale.x, mesh->Scale.y, mesh->Scale.z);
+        mat4_t translationMatrix = mat4MakeTranslation(mesh->Translation.x, mesh->Translation.y, mesh->Translation.z);
+        mat4_t rotationMatrix_X = mat4MakeRotationX(mesh->Rotation.x);
+        mat4_t rotationMatrix_Y = mat4MakeRotationY(mesh->Rotation.y);
+        mat4_t rotationMatrix_Z = mat4MakeRotationZ(mesh->Rotation.z);
 
-        polygon_t polygon = CreatePolygonFromTriangle(
-            vec3FromVec4(transformedVertices[0]), 
-            vec3FromVec4(transformedVertices[1]), 
-            vec3FromVec4(transformedVertices[2]),
-            meshFace.a_uv,
-            meshFace.b_uv,
-            meshFace.c_uv);
 
-        clipPolygon(&polygon);
-
-        //SDL_Log("Number of polygon vertices after clipping: %d", polygon.numVertices);
-
-        triangle_t trianglesAfterClipping[MAX_NUM_POLY_TRIANGLES];
-        int numTrianglesAfterClipping = 0;
-
-        GetTrianglesFromPolygon(&polygon, trianglesAfterClipping, &numTrianglesAfterClipping);
-
-        for (int t = 0; t < numTrianglesAfterClipping; ++t)
+        int numberOfFaces = array_length(mesh->Faces);
+        for (int i = 0; i < numberOfFaces; ++i)
         {
-            triangle_t triangleAfterClipping = trianglesAfterClipping[t];
-            // perspective projection application and perspective divide
-            vec4_t projectedPoints[3];
+            face_t meshFace = mesh->Faces[i];
+
+            vec3_t faceVertices[3];
+            faceVertices[0] = mesh->Vertices[meshFace.a];
+            faceVertices[1] = mesh->Vertices[meshFace.b];
+            faceVertices[2] = mesh->Vertices[meshFace.c];
+
+
+            vec4_t transformedVertices[3];
+            // for each vertex in current face_t we will apply transformations
             for (int j = 0; j < 3; ++j)
             {
-                projectedPoints[j] = mat4Mulvec4(g_PerspectiveProjectionMatrix, triangleAfterClipping.points[j]);
-                //perspective divide after applying the projection matrix
-                if (projectedPoints[j].w != 0.0f)
-                {
-                    projectedPoints[j].x /= projectedPoints[j].w;
-                    projectedPoints[j].y /= projectedPoints[j].w;
-                    projectedPoints[j].z /= projectedPoints[j].w;
-                }
+                vec4_t transformedVertex = vec4FromVec3(faceVertices[j]);
 
-                //scale into the view
-                projectedPoints[j].x *= (g_WindowWidth / 2.0f);
-                projectedPoints[j].y *= (g_WindowHeight / 2.0f);
+                mat4_t worldMatrix = mat4Identity();
+                worldMatrix = mat4Mulmat4(scaleMatrix, worldMatrix);
+                worldMatrix = mat4Mulmat4(rotationMatrix_X, worldMatrix);
+                worldMatrix = mat4Mulmat4(rotationMatrix_Y, worldMatrix);
+                worldMatrix = mat4Mulmat4(rotationMatrix_Z, worldMatrix);
+                worldMatrix = mat4Mulmat4(translationMatrix, worldMatrix);
 
-                // Invert the x values to account for mirroring
-                //projectedPoints[j].x = -projectedPoints[j].x;
+                transformedVertex = mat4Mulvec4(worldMatrix, transformedVertex);
 
-                // Invert the y values to account for flipped screen y coordinate
-                projectedPoints[j].y = -projectedPoints[j].y;
+                transformedVertex = mat4Mulvec4(g_ViewMatrix, transformedVertex);
 
+                //transformedVertex = vec3RotateX(transformedVertex, mesh->Rotation.y);
+                //transformedVertex = vec3RotateY(transformedVertex, mesh->Rotation.y);
+                //transformedVertex = vec3RotateZ(transformedVertex, mesh->Rotation.y);
 
-                // translate projected points to the middle of the screen
-                projectedPoints[j].x += (g_WindowWidth / 2.0f);
-                projectedPoints[j].y += (g_WindowHeight / 2.0f);
-
-
+                transformedVertices[j] = transformedVertex;
             }
 
-            triangle_t triangleToRender =
+            vec3_t vectorA = vec3FromVec4(transformedVertices[0]);
+            vec3_t vectorB = vec3FromVec4(transformedVertices[1]);
+            vec3_t vectorC = vec3FromVec4(transformedVertices[2]);
+
+            vec3_t vectorAB = vec3Normalize(vec3Sub(vectorB, vectorA));
+            vec3_t vectorAC = vec3Normalize(vec3Sub(vectorC, vectorA));
+
+            vec3_t normal = vec3Normalize(vec3Cross(vectorAB, vectorAC));
+
+            vec3_t origin = { 0.0f, 0.0f, 0.0f };
+            vec3_t cameraRay = vec3Sub(origin, vectorA);
+
+            float dotNormalCamera = vec3Dot(cameraRay, normal);
+
+            if (g_CullMethod == CULL_BACKFACE && dotNormalCamera < 0)
             {
-                .points =
-                {
-                    projectedPoints[0], projectedPoints[1], projectedPoints[2]
-                },
+                // we will not render faces that we do not see
+                continue;
+            }
 
-                .texcoords =
-                {
-                    {triangleAfterClipping.texcoords[0].u, triangleAfterClipping.texcoords[0].v},
-                    {triangleAfterClipping.texcoords[1].u, triangleAfterClipping.texcoords[1].v},
-                    {triangleAfterClipping.texcoords[2].u, triangleAfterClipping.texcoords[2].v}
-                },
+            //light calculation
+            float dotNormalLight = vec3Dot(g_DirectionalLight.Direction, normal);
+            float intensityPercentage = (dotNormalLight * 0.5f) + 0.5;
+            meshFace.color = ApplyLightIntensity(meshFace.color, intensityPercentage);
 
-                .color = meshFace.color
-            };
+            polygon_t polygon = CreatePolygonFromTriangle(
+                vec3FromVec4(transformedVertices[0]),
+                vec3FromVec4(transformedVertices[1]),
+                vec3FromVec4(transformedVertices[2]),
+                meshFace.a_uv,
+                meshFace.b_uv,
+                meshFace.c_uv);
 
-            if (g_numTrianglesToRender < MAX_TRIANGLES_PER_MESH)
+            clipPolygon(&polygon);
+
+            //SDL_Log("Number of polygon vertices after clipping: %d", polygon.numVertices);
+
+            triangle_t trianglesAfterClipping[MAX_NUM_POLY_TRIANGLES];
+            int numTrianglesAfterClipping = 0;
+
+            GetTrianglesFromPolygon(&polygon, trianglesAfterClipping, &numTrianglesAfterClipping);
+
+            for (int t = 0; t < numTrianglesAfterClipping; ++t)
             {
-                g_TrianglesToRender[g_numTrianglesToRender++] = triangleToRender;
+                triangle_t triangleAfterClipping = trianglesAfterClipping[t];
+                // perspective projection application and perspective divide
+                vec4_t projectedPoints[3];
+                for (int j = 0; j < 3; ++j)
+                {
+                    projectedPoints[j] = mat4Mulvec4(g_PerspectiveProjectionMatrix, triangleAfterClipping.points[j]);
+                    //perspective divide after applying the projection matrix
+                    if (projectedPoints[j].w != 0.0f)
+                    {
+                        projectedPoints[j].x /= projectedPoints[j].w;
+                        projectedPoints[j].y /= projectedPoints[j].w;
+                        projectedPoints[j].z /= projectedPoints[j].w;
+                    }
+
+                    //scale into the view
+                    projectedPoints[j].x *= (g_WindowWidth / 2.0f);
+                    projectedPoints[j].y *= (g_WindowHeight / 2.0f);
+
+                    // Invert the x values to account for mirroring
+                    //projectedPoints[j].x = -projectedPoints[j].x;
+
+                    // Invert the y values to account for flipped screen y coordinate
+                    projectedPoints[j].y = -projectedPoints[j].y;
+
+
+                    // translate projected points to the middle of the screen
+                    projectedPoints[j].x += (g_WindowWidth / 2.0f);
+                    projectedPoints[j].y += (g_WindowHeight / 2.0f);
+
+
+                }
+
+                triangle_t triangleToRender =
+                {
+                    .points =
+                    {
+                        projectedPoints[0], projectedPoints[1], projectedPoints[2]
+                    },
+
+                    .texcoords =
+                    {
+                        {triangleAfterClipping.texcoords[0].u, triangleAfterClipping.texcoords[0].v},
+                        {triangleAfterClipping.texcoords[1].u, triangleAfterClipping.texcoords[1].v},
+                        {triangleAfterClipping.texcoords[2].u, triangleAfterClipping.texcoords[2].v}
+                    },
+
+                    .color = meshFace.color,
+                    .texture = mesh->Texture
+                };
+
+                if (g_numTrianglesToRender < MAX_TRIANGLES_PER_MESH)
+                {
+                    g_TrianglesToRender[g_numTrianglesToRender++] = triangleToRender;
+                }
             }
         }
     }
@@ -421,9 +434,7 @@ void FreeResources(void)
 {
     free(g_ColorBuffer);
     free(g_zBuffer);
-    upng_free(g_PNG_texture);
-    array_free(g_Mesh.Faces);
-    array_free(g_Mesh.Vertices);
+    FreeMeshes();
 }
 
 #undef main

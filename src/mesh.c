@@ -3,71 +3,33 @@
 #include <stdio.h>
 #include <string.h>
 
-mesh_t g_Mesh =
+
+#define MAX_NUM_MESHES 10
+static mesh_t s_Meshes[MAX_NUM_MESHES];
+static int s_MeshCount = 0;
+
+void LoadMesh(char* objFileName, char* pngFileName, vec3_t scale, vec3_t translation, vec3_t rotation)
 {
-    .Vertices = NULL,
-    .Faces = NULL,
+    LoadOBJMeshData(&s_Meshes[s_MeshCount], objFileName);
+    LoadMeshPngData(&s_Meshes[s_MeshCount], pngFileName);
+    s_Meshes[s_MeshCount].Scale = scale;
+    s_Meshes[s_MeshCount].Translation = translation;
+    s_Meshes[s_MeshCount].Rotation = rotation;
 
-    .Scale = {.x = 1.0f, .y = 1.0f, .z = 1.0f},
-    .Rotation = {.x = 0.0f, .y = 0.0f, .z = 0.0f},
-    .Translation = {.x = 0.0f, .y = 0.0f, .z = 0.0f},
-};
-
-vec3_t g_CubeVertices[NUM_CUBE_VERTICES] =
-{
-    {.x = -1.0f, .y = -1.0f, .z = -1.0f},   // 1
-    {.x = -1.0f, .y = 1.0f, .z = -1.0f},    // 2
-    {.x = 1.0f, .y = 1.0f, .z = -1.0f},     // 3
-    {.x = 1.0f, .y = -1.0f, .z = -1.0f},    // 4
-    {.x = 1.0f, .y = 1.0f, .z = 1.0f},      // 5
-    {.x = 1.0f, .y = -1.0f, .z = 1.0f},     // 6
-    {.x = -1.0f, .y = 1.0f, .z = 1.0f},     // 7
-    {.x = -1.0f, .y = -1.0f, .z = 1.0f},    // 8
-};
-
-face_t g_CubeFaces[NUM_CUBE_FACES] =
-{
-    //front OK
-    {.a = 1, .b = 2, .c = 3, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFFFF0000},
-    {.a = 1, .b = 3, .c = 4, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFFFF0000},
-
-    //right
-    {.a = 4, .b = 3, .c = 5, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFF00FF00},
-    {.a = 4, .b = 5, .c = 6, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFF00FF00},
-
-    //back                   
-    {.a = 6, .b = 5, .c = 7, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFF0000FF},
-    {.a = 6, .b = 7, .c = 8, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFF0000FF},
-
-    //left
-    {.a = 8, .b = 7, .c = 2, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFFFFFF00},
-    {.a = 8, .b = 2, .c = 1, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFFFFFF00},
-
-    //top
-    {.a = 2, .b = 7, .c = 5, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFFFF00FF},
-    {.a = 2, .b = 5, .c = 3, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFFFF00FF},
-
-    //bottom
-    {.a = 6, .b = 8, .c = 1, .a_uv = {0, 1}, .b_uv = {0, 0}, .c_uv = {1,0}, .color = 0xFF00FFFF},
-    {.a = 6, .b = 1, .c = 4, .a_uv = {0, 1}, .b_uv = {1, 0}, .c_uv = {1,1}, .color = 0xFF00FFFF},
-};
-
-void LoadCubeMeshData(void)
-{
-    for (int i = 0; i < NUM_CUBE_VERTICES; ++i)
-    {
-        vec3_t cubeVertex = g_CubeVertices[i];
-        array_push(g_Mesh.Vertices, cubeVertex);
-    }
-
-    for (int i = 0; i < NUM_CUBE_FACES; ++i)
-    {
-        face_t cubeFace = g_CubeFaces[i];
-        array_push(g_Mesh.Faces, cubeFace);
-    }
+    ++s_MeshCount;
 }
 
-void LoadOBJMeshData(const char* filename)
+mesh_t* GetMesh(int index)
+{
+    return &s_Meshes[index];
+}
+
+int GetNumMeshes()
+{
+    return s_MeshCount;
+}
+
+void LoadOBJMeshData(mesh_t* mesh, const char* filename)
 {
     FILE* file;
     file = fopen(filename, "r");
@@ -82,7 +44,7 @@ void LoadOBJMeshData(const char* filename)
         {
             vec3_t vertex;
             sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-            array_push(g_Mesh.Vertices, vertex);
+            array_push(mesh->Vertices, vertex);
         }
         else if (strncmp(line, "vt ", 3) == 0)
         {
@@ -112,10 +74,33 @@ void LoadOBJMeshData(const char* filename)
                 .color = 0xFFFFFFFF
             };
 
-            array_push(g_Mesh.Faces, face);
+            array_push(mesh->Faces, face);
         }
 
     }
 
     array_free(texcoords);
+}
+
+void LoadMeshPngData(mesh_t* mesh, char* filename)
+{
+    upng_t* pngImage = upng_new_from_file(filename);
+    if (pngImage)
+    {
+        upng_decode(pngImage);
+        if (upng_get_error(pngImage) == UPNG_EOK)
+        {
+            mesh->Texture = pngImage;
+        }
+    }
+}
+
+void FreeMeshes()
+{
+    for (int i = 0; i < s_MeshCount; ++i)
+    {
+        upng_free(s_Meshes[i].Texture);
+        array_free(s_Meshes[i].Faces);
+        array_free(s_Meshes[i].Vertices);
+    }
 }
