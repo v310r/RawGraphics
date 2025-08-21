@@ -64,8 +64,8 @@ void Setup(void)
 
     InitFrustumPlanes(fovX, fovY, zNear, zFar);
 
-    LoadMesh("assets/f22.obj", "assets/f22.png", vec3New(1.0f, 1.0f, 1.0f), vec3New(-3.0f, 0.0f, 8.0f), vec3New(0.0f, 0.0f, 0.0f));
-    LoadMesh("assets/f22.obj", "assets/f22.png", vec3New(1.0f, 1.0f, 1.0f), vec3New(3.0f, 0.0f, 8.0f), vec3New(0.0f, 0.0f, 0.0f));
+    //LoadMesh("assets/f22.obj", "assets/f22.png", vec3New(1.0f, 1.0f, 1.0f), vec3New(-3.0f, 0.0f, 8.0f), vec3New(0.0f, 0.0f, 0.0f));
+    LoadMesh("assets/cube.obj", "assets/cube.png", vec3New(2.0f, 2.0f, 2.0f), vec3New(0.0f, 0.0f, 8.0f), vec3New(0.0f, 0.0f, 0.0f));
 
 }
 
@@ -285,6 +285,11 @@ void Update(void)
             continue;
         }
 
+        //mesh->Translation.z += 0.05f * g_DeltaTime;
+        //mesh->Rotation.x += 3.15f * g_DeltaTime;
+        mesh->Rotation.y += 0.1f * g_DeltaTime;
+        //mesh->Rotation.z += 0.1f * g_DeltaTime
+
         mat4_t scaleMatrix = mat4MakeScale(mesh->Scale.x, mesh->Scale.y, mesh->Scale.z);
         mat4_t translationMatrix = mat4MakeTranslation(mesh->Translation.x, mesh->Translation.y, mesh->Translation.z);
         mat4_t rotationMatrix_X = mat4MakeRotationX(mesh->Rotation.x);
@@ -308,6 +313,41 @@ void Update(void)
             for (int j = 0; j < 3; ++j)
             {
                 vec4_t transformedVertex = vec4FromVec3(faceVertices[j]);
+
+                // Note: We use COLUMN MAJOR mathematical order, but I was confused with my OpenGL project's
+                //       glm order and here is why:
+                //
+                //       Notice that world matrix is the second argument, meaning that we multiply each
+                //       transformation with world matrix: S * W; R * W; T * W
+                //
+                //       If we look at the whole picture we would get something like this:
+                //       T * R * S, but NOT S * R * T, just because we passed world matrix as second argument,
+                //
+                //       If we were to pass world matrix as first argument, then we would have the same order as in
+                //       OpenGLJourney project:
+                // 
+                //       glm::mat4 model = glm::mat4(1.0f);
+                //       model = glm::translate(model, translationVector);
+                //       model = glm::rotate(model, glm::radians(rotationVector.x), glm::vec3(1.0f, 0.0f, 0.0f));
+                //       model = glm::rotate(model, glm::radians(rotationVector.y), glm::vec3(0.0f, 1.0f, 0.0f));
+                //       model = glm::rotate(model, glm::radians(rotationVector.z), glm::vec3(0.0f, 0.0f, 1.0f));
+                //       model = glm::scale(model, scaleVector);
+                //       defaultShader.SetMat4("model", model);
+                //
+                //       and analogous C code from this project:
+                // 
+                //       worldMatrix = mat4Mulmat4(worldMatrix, translationMatrix);
+                //       worldMatrix = mat4Mulmat4(worldMatrix, rotationMatrix_X);
+                //       worldMatrix = mat4Mulmat4(worldMatrix, rotationMatrix_Y);
+                //       worldMatrix = mat4Mulmat4(worldMatrix, rotationMatrix_Z);
+                //       worldMatrix = mat4Mulmat4(worldMatrix, scaleMatrix);
+
+
+
+                // And here is the order when we pass worldMatrix as second parameter
+                // !!! Again !!! We use COLUMN MAJOR ORDER
+
+                // You can determine which order you are using just by looking at translation matrix
 
                 mat4_t worldMatrix = mat4Identity();
                 worldMatrix = mat4Mulmat4(scaleMatrix, worldMatrix);
